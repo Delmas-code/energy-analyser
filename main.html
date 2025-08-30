@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mobile Energy Analysis Dashboard - Interactive & Reset</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; background-color:#f5f6fa; color:#2f3640; }
+header { background-color:#40739e; color:white; padding:20px; text-align:center; font-size:2em; font-weight:bold;}
+.dashboard { display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(400px, auto); gap:20px; padding:20px; }
+.panel { background:white; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); padding:20px; }
+.panel h2 { font-size:1.3em; margin-top:0; color:#40739e; }
+.filters { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
+.filters label { font-weight:bold; }
+.filters select, .filters input { padding:5px 8px; border-radius:5px; border:1px solid #dcdde1; }
+#reset-btn { background:#e84118; color:white; padding:5px 12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
+#reset-btn:hover { background:#c23616; }
+</style>
+</head>
+<body>
+
+<header>Mobile Energy Analysis Dashboard</header>
+
+<div class="dashboard">
+<div class="panel" id="panel-hourly">
+<h2>Hourly Energy Usage</h2>
+<div class="filters">
+  <label for="device-hourly">Device:</label>
+  <select id="device-hourly"><option value="all">All Devices</option></select>
+  <button id="reset-btn">Reset Filters</button>
+</div>
+<div id="chart-hourly" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-dow">
+<h2>Day-of-Week Energy Patterns</h2>
+<div id="chart-dow" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-components">
+<h2>CPU / Screen / RAM Contribution</h2>
+<div id="chart-components" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-connectivity">
+<h2>Connectivity & Sensor Impact</h2>
+<div id="chart-connectivity" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-apps">
+<h2>App Activity Energy</h2>
+<div id="chart-apps" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-device">
+<h2>Device Specs vs Energy</h2>
+<div id="chart-device" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-distribution">
+<h2>Energy Distribution & Variability</h2>
+<div id="chart-distribution" style="width:100%;height:350px;"></div>
+</div>
+
+<div class="panel" id="panel-correlation">
+<h2>Correlation & Insights</h2>
+<div id="chart-correlation" style="width:100%;height:350px;"></div>
+</div>
+</div>
+
+<script>
+let globalData = [];
+let currentFilter = {device:'all', day:null, hour:null};
+
+// Load CSV
+d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
+  data.forEach(d=>{
+    d.hour = +d.hour; d.day_of_week=+d.day_of_week;
+    d.sum_norm_device=+d.sum_norm_device; d.sum_norm_battery=+d.sum_norm_battery;
+    d.avg_cpu=+d.avg_cpu; d.avg_screen_on=+d.avg_screen_on; d.avg_ram_usage=+d.avg_ram_usage;
+    d.num_foreground_apps=+d.num_foreground_apps; d.num_background_apps=+d.num_background_apps;
+    d.total_apps=+d.total_apps; d.battery_capacity=+d.battery_capacity;
+    d.ram_capacity=+d.ram_capacity; d.core_numbers=+d.core_numbers;
+  });
+  globalData = data;
+
+  // Device dropdown
+  const devices = Array.from(new Set(data.map(d=>d.device_id)));
+  const deviceSelect = document.getElementById("device-hourly");
+  devices.forEach(d=>{ let opt=document.createElement("option"); opt.value=d; opt.text=d; deviceSelect.add(opt); });
+
+  deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); });
+
+  // Reset button
+  document.getElementById('reset-btn').addEventListener('click',()=>{
+    currentFilter={device:'all',day:null,hour:null};
+    deviceSelect.value='all';
+    renderAll();
+  });
+
+  renderAll();
+});
+
+function filteredData(){
+  return globalData.filter(d=>{
+    if(currentFilter.device!=='all' && d.device_id!==currentFilter.device) return false;
+    if(currentFilter.day!==null && d.day_of_week!==currentFilter.day) return false;
+    if(currentFilter.hour!==null && d.hour!==currentFilter.hour) return false;
+    return true;
+  });
+}
+
+// Render all panels
+function renderAll(){
+  const data=filteredData();
+  renderHourly(data);
+  renderDayOfWeek(data);
+  renderComponents(data);
+  renderConnectivity(data);
+  renderApps(data);
+  renderDeviceComparison(data);
+  renderDistribution(data);
+  renderCorrelation(data);
+}
+
+// Hourly
+function renderHourly(data){
+  const hours=[...Array(24).keys()];
+  const yDevice=hours.map(h=>{
+    const vals=data.filter(d=>d.hour===h).map(x=>x.sum_norm_device);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+  });
+  const yBattery=hours.map(h=>{
+    const vals=data.filter(d=>d.hour===h).map(x=>x.sum_norm_battery);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+  });
+  const traceDevice={x:hours,y:yDevice,name:'Device Norm',type:'scatter',mode:'lines+markers',line:{color:'#e84118',width:3},marker:{size:8}};
+  const traceBattery={x:hours,y:yBattery,name:'Battery Norm',type:'scatter',mode:'lines+markers',line:{color:'#00a8ff',width:3},marker:{size:8}};
+  Plotly.newPlot('chart-hourly',[traceDevice,traceBattery],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Hour'},yaxis:{title:'Normalized Energy'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'},{responsive:true});
+}
+
+// Day-of-Week
+function renderDayOfWeek(data){
+  const dayMap=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const y=dayMap.map((_,i)=>{
+    const vals=data.filter(d=>d.day_of_week===i).map(d=>d.sum_norm_device);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+  });
+  const trace={x:dayMap,y:y,type:'bar',marker:{color:'#00a8ff'}};
+  Plotly.newPlot('chart-dow',[trace],{margin:{t:30,l:50,r:30,b:50},yaxis:{title:'Normalized Energy'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+  // Drill-down click
+  const chart=document.getElementById('chart-dow');
+  chart.on('plotly_click', pts=>{
+    const dayIndex=pts.points[0].pointIndex;
+    currentFilter.day=dayIndex;
+    renderAll();
+  });
+}
+
+// Components
+function renderComponents(data){
+  const traceCPU={x:data.map(d=>d.hour),y:data.map(d=>d.avg_cpu),name:'CPU',type:'bar'};
+  const traceScreen={x:data.map(d=>d.hour),y:data.map(d=>d.avg_screen_on),name:'Screen',type:'bar'};
+  const traceRAM={x:data.map(d=>d.hour),y:data.map(d=>d.avg_ram_usage),name:'RAM',type:'bar'};
+  Plotly.newPlot('chart-components',[traceCPU,traceScreen,traceRAM],{barmode:'stack',margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Hour'},yaxis:{title:'Avg Usage'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+}
+
+// Connectivity
+function renderConnectivity(data){
+  const trace={x:data.map(d=>d.wifi_tx||0),y:data.map(d=>d.mobile_tx||0),mode:'markers',type:'scatter',text:data.map(d=>`Device:${d.device_id}`),marker:{size:8,color:'#9c88ff'}};
+  Plotly.newPlot('chart-connectivity',[trace],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'WiFi TX'},yaxis:{title:'Mobile TX'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+}
+
+// Apps
+function renderApps(data){
+  const traceFG={x:data.map(d=>d.device_id),y:data.map(d=>d.num_foreground_apps),name:'Foreground',type:'bar',marker:{color:'#e84118'}};
+  const traceBG={x:data.map(d=>d.device_id),y:data.map(d=>d.num_background_apps),name:'Background',type:'bar',marker:{color:'#00a8ff'}};
+  Plotly.newPlot('chart-apps',[traceFG,traceBG],{barmode:'stack',margin:{t:30,l:50,r:30,b:100},xaxis:{title:'Device',tickangle:-45},yaxis:{title:'App Count'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+}
+
+// Device comparison
+function renderDeviceComparison(data){
+  const trace={x:data.map(d=>d.battery_capacity),y:data.map(d=>d.sum_norm_device),text:data.map(d=>d.device_id),mode:'markers',type:'scatter',marker:{size:10,color:'#00a8ff'}};
+  Plotly.newPlot('chart-device',[trace],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Battery Capacity'},yaxis:{title:'Normalized Energy'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+}
+
+// Distribution
+function renderDistribution(data){
+  Plotly.newPlot('chart-distribution',[{x:data.map(d=>d.sum_norm_device),type:'histogram',marker:{color:'#e84118'}}],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Normalized Energy'},yaxis:{title:'Count'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+}
+
+// Correlation
+function renderCorrelation(data){
+  const keys=['sum_norm_device','sum_norm_battery','avg_cpu','avg_screen_on','avg_ram_usage','num_foreground_apps','num_background_apps'];
+  const n=keys.length;
+  const matrix=Array.from({length:n},()=>Array(n).fill(0));
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      const x=data.map(d=>d[keys[i]]);
+      const y=data.map(d=>d[keys[j]]);
+      const meanX=x.reduce((a,b)=>a+b,0)/x.length;
+      const meanY=y.reduce((a,b)=>a+b,0)/y.length;
+      const cov=x.map((v,k)=> (v-meanX)*(y[k]-meanY)).reduce((a,b)=>a+b,0)/x.length;
+      const stdX=Math.sqrt(x.map(v=>Math.pow(v-meanX,2)).reduce((a,b)=>a+b,0)/x.length);
+      const stdY=Math.sqrt(y.map(v=>Math.pow(v-meanY,2)).reduce((a,b)=>a+b,0)/x.length);
+      matrix[i][j]=cov/(stdX*stdY);
+    }
+  }
+  Plotly.newPlot('chart-correlation',[{z:matrix,x:keys,y:keys,type:'heatmap',colorscale:'Viridis',zmin:-1,zmax:1,colorbar:{title:'Correlation'}}],{margin:{t:30,l:50,r:30,b:50},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+}
+</script>
+
+</body>
+</html>

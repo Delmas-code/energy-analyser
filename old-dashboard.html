@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mobile Energy Analysis Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.30.1.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; background-color:#f5f6fa; color:#2f3640; }
+  header { background-color:#40739e; color:white; padding:20px; text-align:center; font-size:2em; font-weight:bold;}
+  .dashboard { display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(400px, auto); gap:20px; padding:20px; }
+  .panel { background:white; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); padding:20px; }
+  .panel h2 { font-size:1.3em; margin-top:0; color:#40739e; }
+  .filters { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
+  .filters label { font-weight:bold; }
+  .filters select, .filters input { padding:5px 8px; border-radius:5px; border:1px solid #dcdde1; }
+</style>
+</head>
+<body>
+
+<header>Mobile Energy Analysis Dashboard</header>
+
+<div class="dashboard">
+
+  <!-- Hourly Energy -->
+  <div class="panel" id="panel-hourly">
+    <h2>Hourly Energy Usage</h2>
+    <div class="filters">
+      <label for="device-hourly">Device:</label>
+      <select id="device-hourly"><option value="all">All Devices</option></select>
+    </div>
+    <div id="chart-hourly" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- Day-of-Week -->
+  <div class="panel" id="panel-dow">
+    <h2>Day-of-Week Energy Patterns</h2>
+    <div id="chart-dow" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- Component Contribution -->
+  <div class="panel" id="panel-components">
+    <h2>CPU / Screen / RAM Contribution</h2>
+    <div id="chart-components" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- Connectivity & Sensors -->
+  <div class="panel" id="panel-connectivity">
+    <h2>Connectivity & Sensor Impact</h2>
+    <div id="chart-connectivity" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- App Activity -->
+  <div class="panel" id="panel-apps">
+    <h2>App Activity Energy</h2>
+    <div id="chart-apps" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- Device Comparison -->
+  <div class="panel" id="panel-device">
+    <h2>Device Specs vs Energy</h2>
+    <div id="chart-device" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- Distribution & Variability -->
+  <div class="panel" id="panel-distribution">
+    <h2>Energy Distribution & Variability</h2>
+    <div id="chart-distribution" style="width:100%;height:350px;"></div>
+  </div>
+
+  <!-- Correlation & Insights -->
+  <div class="panel" id="panel-correlation">
+    <h2>Correlation & Insights</h2>
+    <div id="chart-correlation" style="width:100%;height:350px;"></div>
+  </div>
+
+</div>
+
+<script>
+// -------------------
+// 1. Load CSV
+// -------------------
+d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
+  // Convert numeric columns
+  data.forEach(d => {
+    d.hour = +d.hour;
+    d.day_of_week = +d.day_of_week;
+    d.sum_norm_device = +d.sum_norm_device;
+    d.sum_norm_battery = +d.sum_norm_battery;
+    d.avg_cpu = +d.avg_cpu;
+    d.avg_screen_on = +d.avg_screen_on;
+    d.avg_ram_usage = +d.avg_ram_usage;
+    d.num_foreground_apps = +d.num_foreground_apps;
+    d.num_background_apps = +d.num_background_apps;
+    d.total_apps = +d.total_apps;
+    d.battery_capacity = +d.battery_capacity;
+    d.ram_capacity = +d.ram_capacity;
+    d.core_numbers = +d.core_numbers;
+    d.skewness = +d.skewness;
+    d.kurtosis = +d.kurtosis;
+  });
+
+  // Extract device list for filters
+  const devices = Array.from(new Set(data.map(d => d.device_id)));
+  const deviceSelect = document.getElementById("device-hourly");
+  devices.forEach(d => { const opt=document.createElement("option"); opt.value=d; opt.text=d; deviceSelect.add(opt); });
+
+  // -------------------
+  // 2. Helper: filter by device
+  // -------------------
+  function filterByDevice(device) {
+    return device === 'all' ? data : data.filter(d=>d.device_id===device);
+  }
+
+  // -------------------
+  // 3. Hourly Energy Usage
+  // -------------------
+  function updateHourly(device='all') {
+    const d = filterByDevice(device);
+    const hours = [...Array(24).keys()];
+    const yDevice = hours.map(h=>{
+      const vals = d.filter(x=>x.hour===h).map(x=>x.sum_norm_device);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    });
+    const yBattery = hours.map(h=>{
+      const vals = d.filter(x=>x.hour===h).map(x=>x.sum_norm_battery);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    });
+
+    const traceDevice = { x: hours, y: yDevice, name:'Device Norm', type:'scatter', mode:'lines+markers', line:{color:'#e84118', width:3}, marker:{size:8} };
+    const traceBattery = { x: hours, y: yBattery, name:'Battery Norm', type:'scatter', mode:'lines+markers', line:{color:'#00a8ff', width:3}, marker:{size:8} };
+    const layout = { margin:{t:30,l:50,r:30,b:50}, xaxis:{title:'Hour of Day'}, yaxis:{title:'Normalized Energy'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa' };
+    Plotly.newPlot('chart-hourly',[traceDevice,traceBattery],layout,{responsive:true});
+  }
+  updateHourly();
+
+  deviceSelect.addEventListener('change',()=>updateHourly(deviceSelect.value));
+
+  // -------------------
+  // 4. Day-of-Week Energy
+  // -------------------
+  const dayMap = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayEnergy = dayMap.map((d,i)=>{
+    const vals = data.filter(x=>x.day_of_week===i).map(x=>x.sum_norm_device);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  });
+  Plotly.newPlot('chart-dow',[{x:dayMap,y:dayEnergy,type:'bar',marker:{color:'#00a8ff'}}],
+    {margin:{t:30,l:50,r:30,b:50}, yaxis:{title:'Normalized Energy'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 5. Component Contribution (Stacked Bar)
+  // -------------------
+  const componentData = ['avg_cpu','avg_screen_on','avg_ram_usage'].map(k=>{
+    return { x:data.map(d=>d.hour), y:data.map(d=>d[k]), name:k.replace('avg_','').toUpperCase(), type:'bar' };
+  });
+  Plotly.newPlot('chart-components', componentData,
+    {barmode:'stack', margin:{t:30,l:50,r:30,b:50}, xaxis:{title:'Hour'}, yaxis:{title:'Avg Usage'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 6. Connectivity & Sensors (scatter)
+  // -------------------
+  const connectivityTrace = {
+    x: data.map(d=>d.wifi_tx || 0),
+    y: data.map(d=>d.mobile_tx || 0),
+    mode:'markers',
+    type:'scatter',
+    text:data.map(d=>`Device:${d.device_id}<br>Battery:${d.battery_capacity}`),
+    marker:{size:8,color:'#9c88ff'}
+  };
+  Plotly.newPlot('chart-connectivity',[connectivityTrace],
+    {margin:{t:30,l:50,r:30,b:50}, xaxis:{title:'WiFi TX'}, yaxis:{title:'Mobile TX'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 7. App Activity (Stacked Bar)
+  // -------------------
+  const appTraceFG = { x:data.map(d=>d.device_id), y:data.map(d=>d.num_foreground_apps), name:'Foreground', type:'bar', marker:{color:'#e84118'} };
+  const appTraceBG = { x:data.map(d=>d.device_id), y:data.map(d=>d.num_background_apps), name:'Background', type:'bar', marker:{color:'#00a8ff'} };
+  Plotly.newPlot('chart-apps',[appTraceFG,appTraceBG],
+    {barmode:'stack', margin:{t:30,l:50,r:30,b:100}, xaxis:{title:'Device', tickangle:-45}, yaxis:{title:'App Count'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 8. Device Comparison (Scatter)
+  // -------------------
+  const deviceTrace = { x:data.map(d=>d.battery_capacity), y:data.map(d=>d.sum_norm_device), text:data.map(d=>d.device_id), mode:'markers', type:'scatter', marker:{size:10,color:'#00a8ff'} };
+  Plotly.newPlot('chart-device',[deviceTrace],
+    {margin:{t:30,l:50,r:30,b:50}, xaxis:{title:'Battery Capacity'}, yaxis:{title:'Normalized Energy'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 9. Distribution & Variability (Histogram)
+  // -------------------
+  Plotly.newPlot('chart-distribution',[{x:data.map(d=>d.sum_norm_device), type:'histogram', marker:{color:'#e84118'}}],
+    {margin:{t:30,l:50,r:30,b:50}, xaxis:{title:'Normalized Energy'}, yaxis:{title:'Count'}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 10. Correlation Matrix
+  // -------------------
+  const keys=['sum_norm_device','sum_norm_battery','avg_cpu','avg_screen_on','avg_ram_usage','num_foreground_apps','num_background_apps'];
+  const corrData = keys.map
+  // -------------------
+  // 10. Correlation Matrix
+  // -------------------
+  // Compute correlation matrix
+  function computeCorrelationMatrix(data, keys) {
+    const n = keys.length;
+    const matrix = Array.from({length:n},()=>Array(n).fill(0));
+    for(let i=0;i<n;i++){
+      for(let j=0;j<n;j++){
+        const x = data.map(d=>d[keys[i]]);
+        const y = data.map(d=>d[keys[j]]);
+        const meanX = x.reduce((a,b)=>a+b,0)/x.length;
+        const meanY = y.reduce((a,b)=>a+b,0)/y.length;
+        const cov = x.map((v,k)=> (v-meanX)*(y[k]-meanY)).reduce((a,b)=>a+b,0)/x.length;
+        const stdX = Math.sqrt(x.map(v=>Math.pow(v-meanX,2)).reduce((a,b)=>a+b,0)/x.length);
+        const stdY = Math.sqrt(y.map(v=>Math.pow(v-meanY,2)).reduce((a,b)=>a+b,0)/x.length);
+        matrix[i][j] = cov / (stdX*stdY);
+      }
+    }
+    return matrix;
+  }
+
+  const corrMatrix = computeCorrelationMatrix(data, keys);
+  const corrTrace = {
+    z: corrMatrix,
+    x: keys,
+    y: keys,
+    type: 'heatmap',
+    colorscale: 'Viridis',
+    zmin: -1,
+    zmax: 1,
+    colorbar: { title: 'Correlation' }
+  };
+  Plotly.newPlot('chart-correlation',[corrTrace],
+    {margin:{t:30,l:50,r:30,b:50}, plot_bgcolor:'#f5f6fa', paper_bgcolor:'#f5f6fa'});
+
+  // -------------------
+  // 11. Optional: Add Interactivity
+  // -------------------
+  // All charts support hover tooltips and click events for drill-down
+  // You can attach Plotly.react/update for dynamic filtering by device/hour
+
+});
+</script>
+
+</body>
+</html>
