@@ -48,6 +48,11 @@ header { background-color:#40739e; color:white; padding:20px; text-align:center;
 <div id="chart-connectivity" style="width:100%;height:350px;"></div>
 </div>
 
+<div class="panel" id="panel-ga-schedule">
+  <h2>Optimized Weekly Energy Schedule</h2>
+  <div id="chart-ga-schedule" style="width:100%;height:350px;"></div>
+</div>
+
 <div class="panel" id="panel-apps">
 <h2>App Activity Energy</h2>
 <div id="chart-apps" style="width:100%;height:350px;"></div>
@@ -71,6 +76,7 @@ header { background-color:#40739e; color:white; padding:20px; text-align:center;
 
 <script>
 let globalData = [];
+let gaSchedule = [];
 let currentFilter = {device:'all', day:null, hour:null};
 
 // Load CSV
@@ -85,12 +91,25 @@ d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
   });
   globalData = data;
 
+
+d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
+    console.log("✅ Loaded enhanced_schedule.csv:", scheduleData.slice(0, 5));  // <--- Add this
+
+  scheduleData.forEach(d => {
+    d.day_of_week = +d.day_of_week;
+    d.hour = +d.hour;
+    d.drain_label = d.drain_label;
+  });
+  gaSchedule = scheduleData;
+  renderGASchedule(); // initial render
+});
+
   // Device dropdown
   const devices = Array.from(new Set(data.map(d=>d.device_id)));
   const deviceSelect = document.getElementById("device-hourly");
   devices.forEach(d=>{ let opt=document.createElement("option"); opt.value=d; opt.text=d; deviceSelect.add(opt); });
 
-  deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); });
+  deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); renderGASchedule(); });
 
   // Reset button
   document.getElementById('reset-btn').addEventListener('click',()=>{
@@ -111,6 +130,7 @@ function filteredData(){
   });
 }
 
+
 // Render all panels
 function renderAll(){
   const data=filteredData();
@@ -122,6 +142,7 @@ function renderAll(){
   renderDeviceComparison(data);
   renderDistribution(data);
   renderCorrelation(data);
+  //renderGASchedule();
 }
 
 // Hourly
@@ -209,6 +230,59 @@ function renderCorrelation(data){
   }
   Plotly.newPlot('chart-correlation',[{z:matrix,x:keys,y:keys,type:'heatmap',colorscale:'Viridis',zmin:-1,zmax:1,colorbar:{title:'Correlation'}}],{margin:{t:30,l:50,r:30,b:50},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
 }
+function renderGASchedule() {
+  let selectedDevice = currentFilter.device;
+  const container = document.getElementById("chart-ga-schedule");
+
+  if (!gaSchedule.length) return;
+
+  // Fallback if 'all' is selected
+  if (selectedDevice === 'all') {
+    container.innerHTML = "<p style='padding:1rem'>Please select a device to view its optimized weekly schedule.</p>";
+    return;
+  }
+
+  const deviceSchedule = gaSchedule.filter(d => d.device_id === selectedDevice);
+  if (deviceSchedule.length === 0) {
+    container.innerHTML = "<p style='padding:1rem'>No schedule data found for this device.</p>";
+    return;
+  }
+
+  const labelMap = { Low: 0, Normal: 1, High: 2 };
+  const matrix = Array.from({ length: 7 }, () => Array(24).fill(null));
+
+  deviceSchedule.forEach(d => {
+    matrix[d.day_of_week][d.hour] = labelMap[d.drain_label];
+  });
+
+  Plotly.newPlot("chart-ga-schedule", [{
+    z: matrix,
+    type: "heatmap",
+    colorscale: [
+      [0.0, "#4cd137"],
+      [0.5, "#fbc531"],
+      [1.0, "#e84118"]
+    ],
+    zmin: 0,
+    zmax: 2,
+    colorbar: {
+      title: "Drain Level",
+      tickvals: [0, 1, 2],
+      ticktext: ["Low", "Normal", "High"]
+    }
+  }], {
+    title: `Weekly Schedule for Device: ${selectedDevice}`,
+    xaxis: { title: "Hour of Day" },
+    yaxis: {
+      title: "Day of Week",
+      tickvals: [0, 1, 2, 3, 4, 5, 6],
+      ticktext: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    },
+    plot_bgcolor: "#f5f6fa",
+    paper_bgcolor: "#f5f6fa"
+  });
+}
+
 </script>
 
 </body>
