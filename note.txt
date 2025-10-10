@@ -1,0 +1,5 @@
+This kind of analysis would be very valuable for a presentation. You could show:
+
+How often devices deviate from the optimized schedule.
+What the typical energy drain is during those deviations, especially when the actual drain was high but the recommendation was low or normal.
+This helps illustrate the potential for improvement if usage could be shifted or optimized to better match the recommended schedule.

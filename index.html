@@ -38,15 +38,44 @@ header { background-color:#40739e; color:white; padding:20px; text-align:center;
 <div id="chart-dow" style="width:100%;height:350px;"></div>
 </div>
 
-<div class="panel" id="panel-components">
-<h2>CPU / Screen / RAM Contribution</h2>
-<div id="chart-components" style="width:100%;height:350px;"></div>
+<div class="panel" id="panel-components-contribution">
+<h2>CPU / Screen / RAM Contribution Over Time</h2>
+<div id="chart-components-contribution" style="width:100%;height:350px;"></div>
 </div>
+
+<!-- <div class="panel" id="panel-component-contribution">
+  <h2>CPU / Screen / RAM Contribution Over Time</h2>
+  <div id="chart-component-contribution" style="width:100%;height:400px;"></div>
+</div> -->
+
 
 <div class="panel" id="panel-connectivity">
 <h2>Connectivity & Sensor Impact</h2>
 <div id="chart-connectivity" style="width:100%;height:350px;"></div>
 </div>
+
+<!-- <div class="panel" id="panel-actual-schedule">
+  <h2>Actual Weekly Energy Schedule</h2>
+  <div id="chart-actual-schedule" style="width:100%;height:350px;"></div>
+</div> -->
+
+<!-- STACKED BAR CHART -->
+<!-- <div class="panel" id="panel-stacked-bar">
+  <h2>Drain Level Distribution Comparison (Actual vs Optimized)</h2>
+  <div id="chart-stacked-bar" style="width:100%;height:400px;"></div>
+</div> -->
+
+<!-- PARALLEL CATEGORY CHART -->
+<div class="panel" id="panel-parcats">
+  <h2>Drain Level Transition (Actual → Optimized)</h2>
+  <div id="chart-parcats" style="width:100%;height:400px;"></div>
+</div>
+
+
+<!-- <div class="panel" id="panel-categorical-scatter">
+  <h2>Schedule Comparison: Actual vs Optimized vs Alignment</h2>
+  <div id="chart-categorical-scatter" style="width:100%;height:400px;"></div>
+</div> -->
 
 <div class="panel" id="panel-ga-schedule">
   <h2>Optimized Weekly Energy Schedule</h2>
@@ -76,6 +105,7 @@ header { background-color:#40739e; color:white; padding:20px; text-align:center;
 
 <script>
 let globalData = [];
+let actualSchedule = [];
 let gaSchedule = [];
 let currentFilter = {device:'all', day:null, hour:null};
 
@@ -90,6 +120,67 @@ d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
     d.ram_capacity=+d.ram_capacity; d.core_numbers=+d.core_numbers;
   });
   globalData = data;
+
+d3.csv("component_contribution_data.csv").then(data => {
+  // Optionally filter for one device (e.g., selected from dropdown)
+  const deviceId = data[0].device_id;  // For now, just pick first
+  const filtered = data.filter(d => d.device_id === deviceId);
+
+  const hours = filtered.map(d => +d.hour);
+
+  const traceCPU = {
+    x: hours,
+    y: filtered.map(d => +d.avg_cpu),
+    mode: "lines+markers",
+    name: "CPU Usage",
+    line: { color: "#e74c3c", width: 2 },
+    marker: { size: 5 }
+  };
+
+  const traceScreen = {
+    x: hours,
+    y: filtered.map(d => +d.avg_screen_on),
+    mode: "lines+markers",
+    name: "Screen Brightness",
+    line: { color: "#f1c40f", width: 2 },
+    marker: { size: 5 }
+  };
+
+  const traceRAM = {
+    x: hours,
+    y: filtered.map(d => +d.avg_ram_usage),
+    mode: "lines+markers",
+    name: "RAM Usage",
+    line: { color: "#3498db", width: 2 },
+    marker: { size: 5 }
+  };
+
+  const layout = {
+    title: `Component Contribution Over Time — Device ${deviceId}`,
+    xaxis: { title: "Hour of Day", dtick: 1 },
+    yaxis: { title: "Usage (Normalized / Absolute)" },
+    plot_bgcolor: "#f5f6fa",
+    paper_bgcolor: "#f5f6fa",
+    legend: { orientation: "h" }
+  };
+
+  Plotly.newPlot("chart-components-contribution", [traceCPU, traceScreen, traceRAM], layout);
+});
+
+
+/*
+d3.csv("actual_schedule.csv").then(scheduleData => {
+    console.log("✅ Loaded actual_schedule.csv:", scheduleData.slice(0, 5));  // <--- Add this
+
+  scheduleData.forEach(d => {
+    d.day_of_week = +d.day_of_week;
+    d.hour = +d.hour;
+    d.drain_label = d.drain_label;
+  });
+  actualSchedule = scheduleData;
+  renderActualSchedule(); // initial render
+});
+*/
 
 
 d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
@@ -110,6 +201,7 @@ d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
   devices.forEach(d=>{ let opt=document.createElement("option"); opt.value=d; opt.text=d; deviceSelect.add(opt); });
 
   deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); renderGASchedule(); });
+  deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); renderActualSchedule(); });
 
   // Reset button
   document.getElementById('reset-btn').addEventListener('click',()=>{
@@ -121,6 +213,131 @@ d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
   renderAll();
 });
 
+/*
+d3.csv("stacked_bar_data.csv").then(data => {
+  const labels = [...new Set(data.map(d => d.drain_label))];
+  const devices = [...new Set(data.map(d => d.device_id))];
+  const types = [...new Set(data.map(d => d.type))];
+
+  const colors = { Low: "#27ae60", Normal: "#f1c40f", High: "#e74c3c" };
+
+  // Build traces per type (Actual, Optimized)
+  const traces = types.map(t => ({
+    x: devices,
+    y: labels.map(label =>
+      data
+        .filter(d => d.type === t && d.drain_label === label)
+        .reduce((sum, d) => sum + (+d.percent || 0), 0)
+    ),
+    name: t,
+    type: "bar",
+    marker: { color: labels.map(l => colors[l]) },
+  }));
+
+  const layout = {
+    barmode: "stack",
+    title: "Distribution of Energy Drain Levels per Device",
+    xaxis: { title: "Device ID", tickangle: -45 },
+    yaxis: { title: "Percentage of Hours", range: [0, 100] },
+    legend: { orientation: "h" },
+    plot_bgcolor: "#f5f6fa",
+    paper_bgcolor: "#f5f6fa"
+  };
+
+  Plotly.newPlot("chart-stacked-bar", traces, layout);
+});
+*/
+
+d3.csv("parallel_category_data.csv").then(data => {
+  const dimensions = [
+    { label: "Actual", values: data.map(d => d.drain_label_actual) },
+    { label: "Optimized", values: data.map(d => d.drain_label_optimized) }
+  ];
+
+  const colors = {
+    Low: "#27ae60",
+    Normal: "#f1c40f",
+    High: "#e74c3c"
+  };
+
+  const colorScale = data.map(d => colors[d.drain_label_actual] || "#95a5a6");
+
+  const trace = {
+    type: "parcats",
+    dimensions: dimensions,
+    line: {
+      color: colorScale,
+      colorscale: [
+        ["0.0", "#27ae60"],
+        ["0.5", "#f1c40f"],
+        ["1.0", "#e74c3c"]
+      ],
+      shape: "hspline",
+      opacity: 0.8
+    }
+  };
+
+  const layout = {
+    title: "Transitions of Drain Levels (Actual → Optimized)",
+    font: { size: 12 },
+    plot_bgcolor: "#f5f6fa",
+    paper_bgcolor: "#f5f6fa"
+  };
+
+  Plotly.newPlot("chart-parcats", [trace], layout);
+});
+
+/*
+d3.csv("categorical_scatter_data.csv").then(data => {
+  data.forEach(d => {
+    d.day_of_week = +d.day_of_week;
+    d.hour = +d.hour;
+    d.x_jitter = +d.x_jitter;
+    d.y_jitter = +d.y_jitter;
+    d.alignment = d.alignment === "True";
+  });
+
+  const labelMap = {0: "Low", 1: "Normal", 2: "High"};
+  const colors = {Actual: "#3498db", Optimized: "#2ecc71"};
+
+  // Split by type
+  const traces = [
+    {
+      x: data.filter(d => d.type === "Actual").map(d => d.x_jitter),
+      y: data.filter(d => d.type === "Actual").map(d => d.y_jitter),
+      mode: "markers",
+      name: "Actual",
+      marker: {color: colors.Actual, size: 6, opacity: 0.7, symbol: "circle"}
+    },
+    {
+      x: data.filter(d => d.type === "Optimized").map(d => d.x_jitter),
+      y: data.filter(d => d.type === "Optimized").map(d => d.y_jitter),
+      mode: "markers",
+      name: "Optimized",
+      marker: {color: colors.Optimized, size: 6, opacity: 0.7, symbol: "square"}
+    },
+    {
+      x: data.filter(d => d.alignment === false).map(d => d.x_jitter),
+      y: data.filter(d => d.alignment === false).map(d => d.y_jitter),
+      mode: "markers",
+      name: "Misaligned Hours",
+      marker: {color: "#e74c3c", size: 8, opacity: 0.9, symbol: "x"},
+    }
+  ];
+
+  const layout = {
+    title: "Actual vs Optimized Schedules (with Alignment Highlights)",
+    xaxis: {title: "Day of Week", tickvals: [0,1,2,3,4,5,6], ticktext: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]},
+    yaxis: {title: "Drain Level", tickvals: [0,1,2], ticktext: ["Low","Normal","High"]},
+    plot_bgcolor: "#f5f6fa",
+    paper_bgcolor: "#f5f6fa",
+    legend: {orientation: "h"},
+  };
+
+  Plotly.newPlot("chart-categorical-scatter", traces, layout);
+});
+
+*/
 function filteredData(){
   return globalData.filter(d=>{
     if(currentFilter.device!=='all' && d.device_id!==currentFilter.device) return false;
@@ -136,7 +353,7 @@ function renderAll(){
   const data=filteredData();
   renderHourly(data);
   renderDayOfWeek(data);
-  renderComponents(data);
+  //renderComponents(data);
   renderConnectivity(data);
   renderApps(data);
   renderDeviceComparison(data);
@@ -180,12 +397,14 @@ function renderDayOfWeek(data){
 }
 
 // Components
+/*
 function renderComponents(data){
   const traceCPU={x:data.map(d=>d.hour),y:data.map(d=>d.avg_cpu),name:'CPU',type:'bar'};
   const traceScreen={x:data.map(d=>d.hour),y:data.map(d=>d.avg_screen_on),name:'Screen',type:'bar'};
   const traceRAM={x:data.map(d=>d.hour),y:data.map(d=>d.avg_ram_usage),name:'RAM',type:'bar'};
   Plotly.newPlot('chart-components',[traceCPU,traceScreen,traceRAM],{barmode:'stack',margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Hour'},yaxis:{title:'Avg Usage'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
-}
+} 
+*/
 
 // Connectivity
 function renderConnectivity(data){
@@ -230,6 +449,7 @@ function renderCorrelation(data){
   }
   Plotly.newPlot('chart-correlation',[{z:matrix,x:keys,y:keys,type:'heatmap',colorscale:'Viridis',zmin:-1,zmax:1,colorbar:{title:'Correlation'}}],{margin:{t:30,l:50,r:30,b:50},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
 }
+
 function renderGASchedule() {
   let selectedDevice = currentFilter.device;
   const container = document.getElementById("chart-ga-schedule");
@@ -282,6 +502,62 @@ function renderGASchedule() {
     paper_bgcolor: "#f5f6fa"
   });
 }
+
+
+/*
+function renderActualSchedule() {
+  let selectedDevice = currentFilter.device;
+  const container = document.getElementById("chart-actual-schedule");
+
+  if (!actualSchedule.length) return;
+
+  // Fallback if 'all' is selected
+  if (selectedDevice === 'all') {
+    container.innerHTML = "<p style='padding:1rem'>Please select a device to view its actual weekly schedule.</p>";
+    return;
+  }
+
+  const deviceSchedule = actualSchedule.filter(d => d.device_id === selectedDevice);
+  if (deviceSchedule.length === 0) {
+    container.innerHTML = "<p style='padding:1rem'>No actual schedule data found for this device.</p>";
+    return;
+  }
+
+  const labelMap = { Low: 0, Normal: 1, High: 2 };
+  const matrix = Array.from({ length: 7 }, () => Array(24).fill(null));
+
+  deviceSchedule.forEach(d => {
+    matrix[d.day_of_week][d.hour] = labelMap[d.drain_label];
+  });
+
+  Plotly.newPlot("chart-actual-schedule", [{
+    z: matrix,
+    type: "heatmap",
+    colorscale: [
+      [0.0, "#4cd137"],
+      [0.5, "#fbc531"],
+      [1.0, "#e84118"]
+    ],
+    zmin: 0,
+    zmax: 2,
+    colorbar: {
+      title: "Drain Level",
+      tickvals: [0, 1, 2],
+      ticktext: ["Low", "Normal", "High"]
+    }
+  }], {
+    title: `Weekly Schedule for Device: ${selectedDevice}`,
+    xaxis: { title: "Hour of Day" },
+    yaxis: {
+      title: "Day of Week",
+      tickvals: [1, 2, 3, 4, 5, 6, 7],
+      ticktext: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    },
+    plot_bgcolor: "#f5f6fa",
+    paper_bgcolor: "#f5f6fa"
+  });
+}*/
+
 
 </script>
 
