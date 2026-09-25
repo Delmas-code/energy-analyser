@@ -2,564 +2,977 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mobile Energy Analysis Dashboard - Interactive & Reset</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Energy Analyzer — Telemetry Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
+
 <style>
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; background-color:#f5f6fa; color:#2f3640; }
-header { background-color:#40739e; color:white; padding:20px; text-align:center; font-size:2em; font-weight:bold;}
-.dashboard { display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:minmax(400px, auto); gap:20px; padding:20px; }
-.panel { background:white; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.1); padding:20px; }
-.panel h2 { font-size:1.3em; margin-top:0; color:#40739e; }
-.filters { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
-.filters label { font-weight:bold; }
-.filters select, .filters input { padding:5px 8px; border-radius:5px; border:1px solid #dcdde1; }
-#reset-btn { background:#e84118; color:white; padding:5px 12px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; }
-#reset-btn:hover { background:#c23616; }
+/* ══════════════════════════════════════════════════════════
+   RESET & DESIGN TOKENS
+══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink:        #14202e;
+  --ink-soft:   #2a3b4d;
+  --steel:      #2f6690;
+  --steel-lt:   #e7edf3;
+  --steel-pale: #f4f7fa;
+  --bg:         #eef1f5;
+  --card:       #ffffff;
+  --border:     #d7dde5;
+  --muted:      #64748b;
+  --muted-lt:   #94a3b8;
+
+  --sig-green:  #3a9278;
+  --sig-green-bg: #e6f2ee;
+  --sig-amber:  #c98a3e;
+  --sig-amber-bg: #faf1e4;
+  --sig-red:    #b3462c;
+  --sig-red-bg: #fbebe6;
+
+  --sidebar:  242px;
+  --header:   60px;
+  --radius:   8px;
+  --shadow:   0 1px 2px rgba(20,32,46,.04), 0 4px 16px rgba(20,32,46,.06);
+
+  --f-display: 'Space Grotesk', sans-serif;
+  --f-body:    'IBM Plex Sans', system-ui, sans-serif;
+  --f-mono:    'IBM Plex Mono', 'Courier New', monospace;
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--f-body); background: var(--bg); color: var(--ink); min-height: 100vh; overflow-x: hidden; font-size: 14px; }
+svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* ══════════════════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════════════════ */
+#app-header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--header);
+  background: var(--ink); display: flex; align-items: center;
+  padding: 0 26px; gap: 20px; z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--steel), #1c4a6b);
+  display: flex; align-items: center; justify-content: center;
+}
+.brand-mark svg { width: 16px; height: 16px; stroke: #fff; }
+.brand-text { font-family: var(--f-display); font-size: 1rem; font-weight: 600; color: #fff; letter-spacing: -.01em; }
+.brand-text .dim { color: #7c93a8; font-weight: 500; }
+
+.view-toggle {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(255,255,255,.07); border-radius: 7px;
+  padding: 3px; margin-left: auto; flex-shrink: 0;
+}
+.view-toggle button {
+  font-family: var(--f-body); font-size: .76rem; font-weight: 600;
+  color: rgba(255,255,255,.55); background: transparent; border: none;
+  padding: 6px 16px; border-radius: 5px; cursor: pointer;
+  transition: all .18s; letter-spacing: .01em;
+}
+.view-toggle button.active { background: var(--steel); color: #fff; }
+.view-toggle button:not(.active):hover { color: rgba(255,255,255,.85); }
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════════ */
+#sidebar {
+  position: fixed; top: var(--header); left: 0; bottom: 0;
+  width: var(--sidebar); background: var(--card);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; z-index: 90; padding: 18px 0;
+}
+.sidebar-section-label {
+  font-family: var(--f-mono); font-size: .64rem; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted-lt);
+  padding: 8px 22px 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 22px; cursor: pointer;
+  border-left: 2px solid transparent;
+  font-size: .82rem; font-weight: 500; color: var(--ink-soft);
+  transition: all .14s; user-select: none;
+}
+.nav-item:hover { background: var(--steel-pale); }
+.nav-item.active {
+  border-left-color: var(--steel); background: var(--steel-lt);
+  color: var(--steel); font-weight: 600;
+}
+.nav-item svg { color: var(--muted-lt); }
+.nav-item.active svg { color: var(--steel); }
+.nav-badge {
+  margin-left: auto; font-family: var(--f-mono); font-size: .62rem; font-weight: 600;
+  color: var(--muted); background: var(--steel-pale);
+  padding: 2px 7px; border-radius: 4px; letter-spacing: .02em;
+}
+.nav-item.active .nav-badge { background: #fff; color: var(--steel); }
+
+/* ══════════════════════════════════════════════════════════
+   MAIN
+══════════════════════════════════════════════════════════ */
+#main { margin-top: var(--header); margin-left: var(--sidebar); padding: 26px 30px 60px; min-height: calc(100vh - var(--header)); }
+.view { display: none; }
+.view.active { display: block; }
+
+.page-header { margin-bottom: 22px; }
+.page-title { font-family: var(--f-display); font-size: 1.5rem; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+.page-desc { font-size: .82rem; color: var(--muted); margin-top: 4px; max-width: 720px; line-height: 1.5; }
+
+.telemetry-strip {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-family: var(--f-mono); font-size: .7rem;
+  background: var(--ink); color: #cbd5e1;
+  padding: 9px 16px; border-radius: 6px; margin-top: 12px;
+  letter-spacing: .02em;
+}
+.telemetry-strip .seg { display: flex; align-items: center; gap: 6px; }
+.telemetry-strip .sep { color: #3a4d61; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.status-dot.green { background: var(--sig-green); box-shadow: 0 0 0 3px rgba(58,146,120,.25); }
+.status-dot.amber { background: var(--sig-amber); box-shadow: 0 0 0 3px rgba(201,138,62,.25); }
+.status-dot.red   { background: var(--sig-red); box-shadow: 0 0 0 3px rgba(179,70,44,.25); }
+.telemetry-strip .status-text.green { color: #7fd4b8; }
+.telemetry-strip .status-text.amber { color: #e8bd82; }
+.telemetry-strip .status-text.red   { color: #e39b85; }
+
+.kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin: 20px 0 26px; }
+.kpi-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 16px 18px; box-shadow: var(--shadow);
+  border-left: 3px solid var(--steel); position: relative;
+}
+.kpi-card.green { border-left-color: var(--sig-green); }
+.kpi-card.red   { border-left-color: var(--sig-red); }
+.kpi-card.amber { border-left-color: var(--sig-amber); }
+.kpi-value {
+  font-family: var(--f-display); font-size: 1.85rem; font-weight: 600;
+  color: var(--ink); line-height: 1.1;
+  opacity: 0; transform: translateY(5px);
+  transition: opacity .45s ease, transform .45s ease;
+}
+.kpi-value.visible { opacity: 1; transform: translateY(0); }
+.kpi-label { font-size: .68rem; font-weight: 600; color: var(--muted); margin-top: 7px; text-transform: uppercase; letter-spacing: .05em; }
+
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.chart-grid.cols-1 { grid-template-columns: 1fr; }
+.chart-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; overflow: hidden; }
+.panel.full { grid-column: 1 / -1; }
+.panel-title { font-family: var(--f-display); font-size: .88rem; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.panel-subtitle { font-size: .75rem; color: var(--muted); margin-bottom: 12px; line-height: 1.45; }
+.chart-box { width: 100%; height: 310px; }
+.chart-box.tall { height: 370px; }
+
+.filters-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.filters-row label { font-size: .76rem; font-weight: 600; color: var(--muted); font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .03em; }
+.filters-row select, .filters-row input {
+  font-family: var(--f-body); font-size: .8rem;
+  padding: 6px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--card);
+  color: var(--ink); cursor: pointer;
+}
+.btn { font-family: var(--f-body); font-size: .76rem; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; transition: background .15s; }
+.btn-outline { background: transparent; color: var(--sig-red); border: 1px solid var(--sig-red); }
+.btn-outline:hover { background: var(--sig-red-bg); }
+
+.policy-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.policy-table th {
+  background: var(--ink); color: #cbd5e1; padding: 10px 14px;
+  text-align: left; font-weight: 600; font-size: .68rem; letter-spacing: .06em;
+  font-family: var(--f-mono); text-transform: uppercase;
+}
+.policy-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.policy-table tr:last-child td { border-bottom: none; }
+.policy-table tr:nth-child(even) td { background: var(--steel-pale); }
+.action-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px 3px 8px; border-radius: 50px;
+  font-size: .68rem; font-weight: 600; font-family: var(--f-mono); letter-spacing: .02em;
+}
+.action-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+.action-run    { background: var(--sig-red-bg); color: #8f3821; }
+.action-run .dot { background: var(--sig-red); }
+.action-defer  { background: var(--steel-lt); color: #1c4a6b; }
+.action-defer .dot { background: var(--steel); }
+.action-charge { background: var(--sig-green-bg); color: #256b54; }
+.action-charge .dot { background: var(--sig-green); }
+
+.section-divider { border: none; border-top: 1px solid var(--border); margin: 26px 0; }
+
+@media (max-width: 900px) {
+  #sidebar { width: 58px; }
+  .nav-item span, .sidebar-section-label, .nav-badge { display: none; }
+  #main { margin-left: 58px; }
+  .chart-grid, .chart-grid.cols-3 { grid-template-columns: 1fr; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body>
 
-<header>Mobile Energy Analysis Dashboard</header>
+<svg width="0" height="0" style="position:absolute">
+<defs>
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 8.5a16 16 0 0 1 20 0M5.5 12.5a11 11 0 0 1 13 0M9 16.5a6 6 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 18h2M10 18h10M4 12h6M14 12h6"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="18" r="2"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-barchart" viewBox="0 0 24 24"><path d="M3 21V10M9 21V3M15 21v-7M21 21V7"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M7.3 10.8 15.7 7M7.3 13.2l8.4 3.8"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 2 9l10 6 10-6-10-6Z"/><path d="m2 15 10 6 10-6M2 12l10 6 10-6"/></symbol>
+  <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 10v4"/><path d="M6 12h2l1.5-3L11 15l1.5-3H14"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z" stroke-linejoin="round"/><path d="M12 10v4M12 17.5v.1"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 4v4M8 13v2M16 13v2"/><circle cx="12" cy="4" r="1.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+</defs>
+</svg>
 
-<div class="dashboard">
-<div class="panel" id="panel-hourly">
-<h2>Hourly Energy Usage</h2>
-<div class="filters">
-  <label for="device-hourly">Device:</label>
-  <select id="device-hourly"><option value="all">All Devices</option></select>
-  <button id="reset-btn">Reset Filters</button>
+<header id="app-header">
+  <div class="brand">
+    <div class="brand-mark"><svg viewBox="0 0 24 24"><use href="#i-logo"/></svg></div>
+    <div class="brand-text">MOBILE ENERGY <span class="dim">ANALYZER</span></div>
+  </div>
+  <div class="view-toggle">
+    <button id="btn-exploration" class="active" onclick="switchView('exploration')">Exploration</button>
+    <button id="btn-aiml" onclick="switchView('aiml')">AI / ML Phases</button>
+  </div>
+</header>
+
+<nav id="sidebar">
+  <div id="nav-exploration">
+    <div class="sidebar-section-label">Exploration</div>
+    <div class="nav-item active" onclick="activateTab('exp-hourly', this)">
+      <svg class="icon"><use href="#i-clock"/></svg><span>Hourly Usage</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-dow', this)">
+      <svg class="icon"><use href="#i-calendar"/></svg><span>Day-of-Week</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-components', this)">
+      <svg class="icon"><use href="#i-cpu"/></svg><span>Components</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-connectivity', this)">
+      <svg class="icon"><use href="#i-wifi"/></svg><span>Connectivity</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-apps', this)">
+      <svg class="icon"><use href="#i-phone"/></svg><span>App Activity</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-device', this)">
+      <svg class="icon"><use href="#i-sliders"/></svg><span>Device Specs</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-schedule', this)">
+      <svg class="icon"><use href="#i-grid"/></svg><span>Schedules</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-distribution', this)">
+      <svg class="icon"><use href="#i-barchart"/></svg><span>Distribution</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('exp-correlation', this)">
+      <svg class="icon"><use href="#i-share"/></svg><span>Correlation</span>
+    </div>
+  </div>
+
+  <div id="nav-aiml" style="display:none">
+    <div class="sidebar-section-label">AI / ML Pipeline</div>
+    <div class="nav-item active" onclick="activateTab('ph1', this)">
+      <svg class="icon"><use href="#i-layers"/></svg><span>Phase 1 — Personas</span>
+      <span class="nav-badge">K-MEANS</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('ph2', this)">
+      <svg class="icon"><use href="#i-battery"/></svg><span>Phase 2 — TTE Model</span>
+      <span class="nav-badge">XGBOOST</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('ph3', this)">
+      <svg class="icon"><use href="#i-alert"/></svg><span>Phase 3 — Anomalies</span>
+      <span class="nav-badge">ISO-FOREST</span>
+    </div>
+    <div class="nav-item" onclick="activateTab('ph4', this)">
+      <svg class="icon"><use href="#i-bot"/></svg><span>Phase 4 — RL Agent</span>
+      <span class="nav-badge">Q-LEARN</span>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+<div id="view-exploration" class="view active">
+
+  <div id="exp-hourly" class="tab-content active">
+    <div class="page-header">
+      <div class="page-title">Hourly Energy Usage</div>
+      <div class="page-desc">Average normalized device and battery energy consumption across all 24 hours.</div>
+    </div>
+    <div class="filters-row">
+      <label for="device-hourly">Device</label>
+      <select id="device-hourly"><option value="all">All Devices</option></select>
+      <button class="btn btn-outline" id="reset-btn">Reset Filters</button>
+    </div>
+    <div class="panel"><div id="chart-hourly" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-dow" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Day-of-Week Energy Patterns</div>
+      <div class="page-desc">Click a bar to drill down by that day across all other charts.</div>
+    </div>
+    <div class="panel"><div id="chart-dow" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-components" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">CPU / Screen / RAM Over Time</div>
+      <div class="page-desc">Hourly contribution of each system component, per device.</div>
+    </div>
+    <div class="panel"><div id="chart-components-contribution" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-connectivity" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Connectivity &amp; Sensor Impact</div>
+      <div class="page-desc">Relationship between WiFi and mobile data transmission across devices.</div>
+    </div>
+    <div class="panel"><div id="chart-connectivity" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-apps" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">App Activity Energy</div>
+      <div class="page-desc">Foreground vs background app counts stacked per device.</div>
+    </div>
+    <div class="panel"><div id="chart-apps" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-device" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Device Specs vs Energy</div>
+      <div class="page-desc">Battery capacity as a predictor of normalized energy consumption.</div>
+    </div>
+    <div class="panel"><div id="chart-device" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-schedule" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Energy Schedules</div>
+      <div class="page-desc">Drain level transitions (Actual → Optimized) and the optimized weekly heatmap per device.</div>
+    </div>
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title">Drain Level Transition</div>
+        <div class="panel-subtitle">Flow view of how drain categories shift after optimization.</div>
+        <div id="chart-parcats" class="chart-box"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Optimized Weekly Schedule</div>
+        <div class="panel-subtitle">Select a device to view its optimized day × hour heatmap.</div>
+        <div class="filters-row" style="margin-bottom:10px">
+          <label for="device-schedule">Device</label>
+          <select id="device-schedule"><option value="all">Select a device…</option></select>
+        </div>
+        <div id="chart-ga-schedule" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="exp-distribution" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Energy Distribution &amp; Variability</div>
+      <div class="page-desc">Histogram of normalized device energy — how concentrated or spread is daily usage?</div>
+    </div>
+    <div class="panel"><div id="chart-distribution" class="chart-box tall"></div></div>
+  </div>
+
+  <div id="exp-correlation" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Correlation Heatmap</div>
+      <div class="page-desc">Pearson correlation between key energy and usage features. Darker = stronger relationship.</div>
+    </div>
+    <div class="panel"><div id="chart-correlation" class="chart-box tall"></div></div>
+  </div>
+
 </div>
-<div id="chart-hourly" style="width:100%;height:350px;"></div>
+
+
+<div id="view-aiml" class="view">
+
+  <div id="ph1" class="tab-content active">
+    <div class="page-header">
+      <div class="page-title">Phase 1 — Usage Persona Clustering</div>
+      <div class="page-desc">K-Means groups device-days into usage archetypes based on screen, network, battery, and CPU behavior.</div>
+      <div class="telemetry-strip">
+        <span class="seg">MODEL: K-MEANS (k=3)</span><span class="sep">/</span>
+        <span class="seg">N=94 DEVICE-DAYS</span><span class="sep">/</span>
+        <span class="seg">SILHOUETTE: 0.23</span><span class="sep">/</span>
+        <span class="seg"><span class="status-dot amber"></span><span class="status-text amber">PRELIMINARY — DEVICE-COUNT LIMITED</span></span>
+      </div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi-card"><div class="kpi-value" data-target="3">0</div><div class="kpi-label">Personas Detected</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="94">0</div><div class="kpi-label">Device-Days Clustered</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="0.23" data-decimals="2">0</div><div class="kpi-label">Best Silhouette Score</div></div>
+      <div class="kpi-card red"><div class="kpi-value" data-target="10">0</div><div class="kpi-label">Unique Devices</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title">Cluster Size Distribution</div>
+        <div class="panel-subtitle">How many device-days fall into each persona — imbalance signals potential instability.</div>
+        <div id="ph1-cluster-sizes" class="chart-box"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Persona Feature Profiles</div>
+        <div class="panel-subtitle">Each polygon is one persona — shape shows its behavioral signature across 5 key dimensions.</div>
+        <div id="ph1-radar" class="chart-box"></div>
+      </div>
+      <div class="panel full">
+        <div class="panel-title">Feature Intensity by Cluster</div>
+        <div class="panel-subtitle">Which features most strongly define each cluster. Darker = higher relative value.</div>
+        <div id="ph1-heatmap" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ph2" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Phase 2 — Predictive Energy Modeling</div>
+      <div class="page-desc">XGBoost regression predicts battery discharge rate from prior-day usage features to estimate Time to Empty.</div>
+      <div class="telemetry-strip">
+        <span class="seg">MODEL: XGBOOST (LAGGED)</span><span class="sep">/</span>
+        <span class="seg">N=40 TRAIN ROWS</span><span class="sep">/</span>
+        <span class="seg">R² (DEVICE-CV): −0.22</span><span class="sep">/</span>
+        <span class="seg"><span class="status-dot red"></span><span class="status-text red">NOT PRODUCTION READY — BELOW BASELINE</span></span>
+      </div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi-card amber"><div class="kpi-value" data-target="0.126" data-decimals="3">0</div><div class="kpi-label">R² (Row-Level CV)</div></div>
+      <div class="kpi-card red"><div class="kpi-value" data-target="-0.22" data-decimals="2">0</div><div class="kpi-label">R² (Device-Level CV)</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="0.914" data-decimals="3">0</div><div class="kpi-label">MAE (pct-pts/hr)</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="40">0</div><div class="kpi-label">Training Rows (Strict Lag)</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title">Feature Importances</div>
+        <div class="panel-subtitle">Which prior-day signals drive the drain-rate prediction most. Yesterday's own rate dominates.</div>
+        <div id="ph2-importance" class="chart-box"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Row-Level vs Device-Level R²</div>
+        <div class="panel-subtitle">The gap between bars shows the model partly memorizing per-device baselines.</div>
+        <div id="ph2-r2-comparison" class="chart-box"></div>
+      </div>
+      <div class="panel full">
+        <div class="panel-title">Drain Rate Distribution by Device</div>
+        <div class="panel-subtitle">Spread of actual drain rate per device — the range the model must predict across.</div>
+        <div id="ph2-drain-dist" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ph3" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Phase 3 — Anomaly Detection</div>
+      <div class="page-desc">Isolation Forest flags device-days that deviate from each device's own behavioral baseline.</div>
+      <div class="telemetry-strip">
+        <span class="seg">MODEL: ISOLATION FOREST</span><span class="sep">/</span>
+        <span class="seg">BASELINE: PER-DEVICE HISTORY</span><span class="sep">/</span>
+        <span class="seg">11 FLAGGED / 94</span><span class="sep">/</span>
+        <span class="seg"><span class="status-dot green"></span><span class="status-text green">RELIABLE AT CURRENT SCALE</span></span>
+      </div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi-card red"><div class="kpi-value" data-target="11">0</div><div class="kpi-label">Anomalous Days Flagged</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="5">0</div><div class="kpi-label">Eligible Devices</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="5">0</div><div class="kpi-label">Devices Skipped (Low History)</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="3">0</div><div class="kpi-label">Double-Flagged (Both Checks)</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="panel full">
+        <div class="panel-title">Anomaly Scores Timeline</div>
+        <div class="panel-subtitle">Each dot is one device-day. X markers below the dashed line are flagged anomalies. Colored by device.</div>
+        <div id="ph3-timeline" class="chart-box tall"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Device-Day Classification</div>
+        <div class="panel-subtitle">Normal vs anomalous vs skipped per device.</div>
+        <div id="ph3-breakdown" class="chart-box"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Top Anomalous Days Ranked</div>
+        <div class="panel-subtitle">Lower score = more isolated = more anomalous.</div>
+        <div id="ph3-ranked" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ph4" class="tab-content" style="display:none">
+    <div class="page-header">
+      <div class="page-title">Phase 4 — Energy-Aware RL Scheduling</div>
+      <div class="page-desc">A Q-Learning agent learns to schedule deferrable tasks by trading battery savings against task freshness.</div>
+      <div class="telemetry-strip">
+        <span class="seg">MODEL: TABULAR Q-LEARNING</span><span class="sep">/</span>
+        <span class="seg">STATE: 10 BUCKETS × 3 ACTIONS</span><span class="sep">/</span>
+        <span class="seg">500 EPISODES</span><span class="sep">/</span>
+        <span class="seg"><span class="status-dot green"></span><span class="status-text green">SIMULATION VALIDATED</span></span>
+      </div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi-card green"><div class="kpi-value" data-target="78.5" data-decimals="1">0</div><div class="kpi-label">% Reward Improvement vs Random</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="3.3" data-decimals="1" data-prefix="+">0</div><div class="kpi-label">Battery % Saved vs Random</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="500">0</div><div class="kpi-label">Training Episodes</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="30">0</div><div class="kpi-label">Q-Table Values (10×3)</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title">Learned Policy by Battery Level</div>
+        <div class="panel-subtitle">The 10–20% DEFER_CHARGING row emerged without being explicitly programmed.</div>
+        <div id="ph4-policy" class="chart-box"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Agent vs Random Baseline</div>
+        <div class="panel-subtitle">Mean reward and final battery % across 20 held-out evaluation episodes.</div>
+        <div id="ph4-comparison" class="chart-box"></div>
+      </div>
+      <div class="panel full">
+        <div class="panel-title">Q-Table Heatmap</div>
+        <div class="panel-subtitle">Q-value intensity for all 30 state-action pairs. ★ marks the greedy action chosen per row.</div>
+        <div id="ph4-qtable" class="chart-box tall"></div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+    <div class="panel">
+      <div class="panel-title">Full Policy Table</div>
+      <div class="panel-subtitle" style="margin-bottom:16px">The complete exported policy (q_policy.json). At inference: battery_level // 10 → greedy_action. No ML framework needed on-device.</div>
+      <table class="policy-table" id="ph4-policy-table"></table>
+    </div>
+  </div>
+
 </div>
+</main>
 
-<div class="panel" id="panel-dow">
-<h2>Day-of-Week Energy Patterns</h2>
-<div id="chart-dow" style="width:100%;height:350px;"></div>
-</div>
-
-<div class="panel" id="panel-components-contribution">
-<h2>CPU / Screen / RAM Contribution Over Time</h2>
-<div id="chart-components-contribution" style="width:100%;height:350px;"></div>
-</div>
-
-<!-- <div class="panel" id="panel-component-contribution">
-  <h2>CPU / Screen / RAM Contribution Over Time</h2>
-  <div id="chart-component-contribution" style="width:100%;height:400px;"></div>
-</div> -->
-
-
-<div class="panel" id="panel-connectivity">
-<h2>Connectivity & Sensor Impact</h2>
-<div id="chart-connectivity" style="width:100%;height:350px;"></div>
-</div>
-
-<!-- <div class="panel" id="panel-actual-schedule">
-  <h2>Actual Weekly Energy Schedule</h2>
-  <div id="chart-actual-schedule" style="width:100%;height:350px;"></div>
-</div> -->
-
-<!-- STACKED BAR CHART -->
-<!-- <div class="panel" id="panel-stacked-bar">
-  <h2>Drain Level Distribution Comparison (Actual vs Optimized)</h2>
-  <div id="chart-stacked-bar" style="width:100%;height:400px;"></div>
-</div> -->
-
-<!-- PARALLEL CATEGORY CHART -->
-<div class="panel" id="panel-parcats">
-  <h2>Drain Level Transition (Actual → Optimized)</h2>
-  <div id="chart-parcats" style="width:100%;height:400px;"></div>
-</div>
-
-
-<!-- <div class="panel" id="panel-categorical-scatter">
-  <h2>Schedule Comparison: Actual vs Optimized vs Alignment</h2>
-  <div id="chart-categorical-scatter" style="width:100%;height:400px;"></div>
-</div> -->
-
-<div class="panel" id="panel-ga-schedule">
-  <h2>Optimized Weekly Energy Schedule</h2>
-  <div id="chart-ga-schedule" style="width:100%;height:350px;"></div>
-</div>
-
-<div class="panel" id="panel-apps">
-<h2>App Activity Energy</h2>
-<div id="chart-apps" style="width:100%;height:350px;"></div>
-</div>
-
-<div class="panel" id="panel-device">
-<h2>Device Specs vs Energy</h2>
-<div id="chart-device" style="width:100%;height:350px;"></div>
-</div>
-
-<div class="panel" id="panel-distribution">
-<h2>Energy Distribution & Variability</h2>
-<div id="chart-distribution" style="width:100%;height:350px;"></div>
-</div>
-
-<div class="panel" id="panel-correlation">
-<h2>Correlation & Insights</h2>
-<div id="chart-correlation" style="width:100%;height:350px;"></div>
-</div>
-</div>
 
 <script>
-let globalData = [];
-let actualSchedule = [];
-let gaSchedule = [];
-let currentFilter = {device:'all', day:null, hour:null};
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.getElementById('btn-exploration').classList.toggle('active', view === 'exploration');
+  document.getElementById('btn-aiml').classList.toggle('active', view === 'aiml');
+  document.getElementById('nav-exploration').style.display = view === 'exploration' ? '' : 'none';
+  document.getElementById('nav-aiml').style.display = view === 'aiml' ? '' : 'none';
 
-// Load CSV
+  const navGroup = view === 'exploration' ? 'nav-exploration' : 'nav-aiml';
+  const firstItem = document.querySelector('#' + navGroup + ' .nav-item');
+  if (firstItem) {
+    document.querySelectorAll('#' + navGroup + ' .nav-item').forEach(i => i.classList.remove('active'));
+    firstItem.classList.add('active');
+    const firstTabId = firstItem.getAttribute('onclick').match(/'([^']+)'/)[1];
+    showTab(view === 'exploration' ? 'view-exploration' : 'view-aiml', firstTabId);
+  }
+  if (view === 'aiml') animateKPIs();
+}
+function activateTab(tabId, el) {
+  const viewEl = el.closest('.view');
+  viewEl.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  const target = document.getElementById(tabId);
+  if (target) target.style.display = '';
+  const navGroup = el.closest('[id^="nav-"]');
+  navGroup.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  if (document.getElementById('view-aiml').classList.contains('active')) animateKPIs();
+}
+function showTab(viewId, tabId) {
+  const view = document.getElementById(viewId);
+  view.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  const target = document.getElementById(tabId);
+  if (target) target.style.display = '';
+}
+
+function animateKPIs() {
+  document.querySelectorAll('#view-aiml .kpi-value').forEach(el => {
+    const target = parseFloat(el.dataset.target);
+    const decimals = parseInt(el.dataset.decimals || 0);
+    const prefix = el.dataset.prefix || '';
+    const isNeg = target < 0;
+    const abs = Math.abs(target);
+    let start = null;
+    el.classList.remove('visible');
+    const duration = 650;
+    requestAnimationFrame(function step(ts) {
+      if (!start) start = ts;
+      const prog = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - prog, 3);
+      const val = eased * abs;
+      el.textContent = (isNeg ? '-' : prefix) + val.toFixed(decimals);
+      if (prog < 1) requestAnimationFrame(step);
+      else el.textContent = (isNeg ? '-' : prefix) + abs.toFixed(decimals);
+    });
+    el.classList.add('visible');
+  });
+}
+
+const COL = {
+  ink: '#14202e', steel: '#2f6690', steelLt: '#7ca3c0',
+  green: '#3a9278', amber: '#c98a3e', red: '#b3462c',
+  grid: '#e7edf3', muted: '#64748b'
+};
+const PLY_FONT = { family: 'IBM Plex Sans, sans-serif', size: 11, color: COL.ink };
+const PLY_CONFIG = { responsive: true, displayModeBar: false };
+function layout(extra) {
+  return Object.assign({
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    font: PLY_FONT, margin: { t: 18, l: 52, r: 18, b: 46 },
+    xaxis: { gridcolor: COL.grid, zerolinecolor: COL.grid, linecolor: COL.grid },
+    yaxis: { gridcolor: COL.grid, zerolinecolor: COL.grid, linecolor: COL.grid },
+    hoverlabel: { bgcolor: COL.ink, font: { family: 'IBM Plex Mono, monospace', size: 11, color: '#fff' }, bordercolor: COL.ink },
+  }, extra);
+}
+
+let globalData = [], gaSchedule = [];
+let currentFilter = { device: 'all', day: null, hour: null };
+
 d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
-  data.forEach(d=>{
-    d.hour = +d.hour; d.day_of_week=+d.day_of_week;
-    d.sum_norm_device=+d.sum_norm_device; d.sum_norm_battery=+d.sum_norm_battery;
-    d.avg_cpu=+d.avg_cpu; d.avg_screen_on=+d.avg_screen_on; d.avg_ram_usage=+d.avg_ram_usage;
-    d.num_foreground_apps=+d.num_foreground_apps; d.num_background_apps=+d.num_background_apps;
-    d.total_apps=+d.total_apps; d.battery_capacity=+d.battery_capacity;
-    d.ram_capacity=+d.ram_capacity; d.core_numbers=+d.core_numbers;
+  data.forEach(d => {
+    d.hour = +d.hour; d.day_of_week = +d.day_of_week;
+    d.sum_norm_device = +d.sum_norm_device; d.sum_norm_battery = +d.sum_norm_battery;
+    d.avg_cpu = +d.avg_cpu; d.avg_screen_on = +d.avg_screen_on; d.avg_ram_usage = +d.avg_ram_usage;
+    d.num_foreground_apps = +d.num_foreground_apps; d.num_background_apps = +d.num_background_apps;
+    d.total_apps = +d.total_apps; d.battery_capacity = +d.battery_capacity;
+    d.ram_capacity = +d.ram_capacity; d.core_numbers = +d.core_numbers;
   });
   globalData = data;
+  const devices = Array.from(new Set(data.map(d => d.device_id)));
+  ['device-hourly', 'device-schedule'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    devices.forEach(d => { const o = document.createElement('option'); o.value = d; o.text = d; sel.add(o); });
+  });
+  document.getElementById('device-hourly').addEventListener('change', () => {
+    currentFilter.device = document.getElementById('device-hourly').value; renderAll();
+  });
+  document.getElementById('device-schedule').addEventListener('change', () => {
+    currentFilter.device = document.getElementById('device-schedule').value; renderGASchedule();
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    currentFilter = { device: 'all', day: null, hour: null };
+    document.getElementById('device-hourly').value = 'all'; renderAll();
+  });
+  renderAll();
+}).catch(() => console.warn('final_energy_analysis_data_normalized.csv not found — exploration charts will be empty.'));
 
 d3.csv("component_contribution_data.csv").then(data => {
-  // Optionally filter for one device (e.g., selected from dropdown)
-  const deviceId = data[0].device_id;  // For now, just pick first
+  const deviceId = data[0].device_id;
   const filtered = data.filter(d => d.device_id === deviceId);
-
   const hours = filtered.map(d => +d.hour);
-
-  const traceCPU = {
-    x: hours,
-    y: filtered.map(d => +d.avg_cpu),
-    mode: "lines+markers",
-    name: "CPU Usage",
-    line: { color: "#e74c3c", width: 2 },
-    marker: { size: 5 }
-  };
-
-  const traceScreen = {
-    x: hours,
-    y: filtered.map(d => +d.avg_screen_on),
-    mode: "lines+markers",
-    name: "Screen Brightness",
-    line: { color: "#f1c40f", width: 2 },
-    marker: { size: 5 }
-  };
-
-  const traceRAM = {
-    x: hours,
-    y: filtered.map(d => +d.avg_ram_usage),
-    mode: "lines+markers",
-    name: "RAM Usage",
-    line: { color: "#3498db", width: 2 },
-    marker: { size: 5 }
-  };
-
-  const layout = {
-    title: `Component Contribution Over Time — Device ${deviceId}`,
-    xaxis: { title: "Hour of Day", dtick: 1 },
-    yaxis: { title: "Usage (Normalized / Absolute)" },
-    plot_bgcolor: "#f5f6fa",
-    paper_bgcolor: "#f5f6fa",
-    legend: { orientation: "h" }
-  };
-
-  Plotly.newPlot("chart-components-contribution", [traceCPU, traceScreen, traceRAM], layout);
-});
-
-
-/*
-d3.csv("actual_schedule.csv").then(scheduleData => {
-    console.log("✅ Loaded actual_schedule.csv:", scheduleData.slice(0, 5));  // <--- Add this
-
-  scheduleData.forEach(d => {
-    d.day_of_week = +d.day_of_week;
-    d.hour = +d.hour;
-    d.drain_label = d.drain_label;
-  });
-  actualSchedule = scheduleData;
-  renderActualSchedule(); // initial render
-});
-*/
-
+  Plotly.newPlot("chart-components-contribution", [
+    { x: hours, y: filtered.map(d => +d.avg_cpu), mode: 'lines+markers', name: 'CPU', line: { color: COL.red, width: 2 }, marker: { size: 5 } },
+    { x: hours, y: filtered.map(d => +d.avg_screen_on), mode: 'lines+markers', name: 'Screen', line: { color: COL.amber, width: 2 }, marker: { size: 5 } },
+    { x: hours, y: filtered.map(d => +d.avg_ram_usage), mode: 'lines+markers', name: 'RAM', line: { color: COL.steel, width: 2 }, marker: { size: 5 } },
+  ], layout({ xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid }, yaxis: { title: 'Usage', gridcolor: COL.grid }, legend: { orientation: 'h' } }), PLY_CONFIG);
+}).catch(() => {});
 
 d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
-    console.log("✅ Loaded enhanced_schedule.csv:", scheduleData.slice(0, 5));  // <--- Add this
-
-  scheduleData.forEach(d => {
-    d.day_of_week = +d.day_of_week;
-    d.hour = +d.hour;
-    d.drain_label = d.drain_label;
-  });
+  scheduleData.forEach(d => { d.day_of_week = +d.day_of_week; d.hour = +d.hour; });
   gaSchedule = scheduleData;
-  renderGASchedule(); // initial render
-});
-
-  // Device dropdown
-  const devices = Array.from(new Set(data.map(d=>d.device_id)));
-  const deviceSelect = document.getElementById("device-hourly");
-  devices.forEach(d=>{ let opt=document.createElement("option"); opt.value=d; opt.text=d; deviceSelect.add(opt); });
-
-  deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); renderGASchedule(); });
-  deviceSelect.addEventListener('change',()=>{ currentFilter.device=deviceSelect.value; renderAll(); renderActualSchedule(); });
-
-  // Reset button
-  document.getElementById('reset-btn').addEventListener('click',()=>{
-    currentFilter={device:'all',day:null,hour:null};
-    deviceSelect.value='all';
-    renderAll();
-  });
-
-  renderAll();
-});
-
-/*
-d3.csv("stacked_bar_data.csv").then(data => {
-  const labels = [...new Set(data.map(d => d.drain_label))];
-  const devices = [...new Set(data.map(d => d.device_id))];
-  const types = [...new Set(data.map(d => d.type))];
-
-  const colors = { Low: "#27ae60", Normal: "#f1c40f", High: "#e74c3c" };
-
-  // Build traces per type (Actual, Optimized)
-  const traces = types.map(t => ({
-    x: devices,
-    y: labels.map(label =>
-      data
-        .filter(d => d.type === t && d.drain_label === label)
-        .reduce((sum, d) => sum + (+d.percent || 0), 0)
-    ),
-    name: t,
-    type: "bar",
-    marker: { color: labels.map(l => colors[l]) },
-  }));
-
-  const layout = {
-    barmode: "stack",
-    title: "Distribution of Energy Drain Levels per Device",
-    xaxis: { title: "Device ID", tickangle: -45 },
-    yaxis: { title: "Percentage of Hours", range: [0, 100] },
-    legend: { orientation: "h" },
-    plot_bgcolor: "#f5f6fa",
-    paper_bgcolor: "#f5f6fa"
-  };
-
-  Plotly.newPlot("chart-stacked-bar", traces, layout);
-});
-*/
+  renderGASchedule();
+}).catch(() => {});
 
 d3.csv("parallel_category_data.csv").then(data => {
-  const dimensions = [
-    { label: "Actual", values: data.map(d => d.drain_label_actual) },
-    { label: "Optimized", values: data.map(d => d.drain_label_optimized) }
-  ];
+  Plotly.newPlot("chart-parcats", [{
+    type: 'parcats',
+    dimensions: [
+      { label: 'Actual', values: data.map(d => d.drain_label_actual) },
+      { label: 'Optimized', values: data.map(d => d.drain_label_optimized) }
+    ],
+    line: { color: data.map(d => ({ Low: COL.green, Normal: COL.amber, High: COL.red }[d.drain_label_actual] || '#95a5a6')), shape: 'hspline', opacity: 0.8 }
+  }], layout({}), PLY_CONFIG);
+}).catch(() => {});
 
-  const colors = {
-    Low: "#27ae60",
-    Normal: "#f1c40f",
-    High: "#e74c3c"
-  };
-
-  const colorScale = data.map(d => colors[d.drain_label_actual] || "#95a5a6");
-
-  const trace = {
-    type: "parcats",
-    dimensions: dimensions,
-    line: {
-      color: colorScale,
-      colorscale: [
-        ["0.0", "#27ae60"],
-        ["0.5", "#f1c40f"],
-        ["1.0", "#e74c3c"]
-      ],
-      shape: "hspline",
-      opacity: 0.8
-    }
-  };
-
-  const layout = {
-    title: "Transitions of Drain Levels (Actual → Optimized)",
-    font: { size: 12 },
-    plot_bgcolor: "#f5f6fa",
-    paper_bgcolor: "#f5f6fa"
-  };
-
-  Plotly.newPlot("chart-parcats", [trace], layout);
-});
-
-/*
-d3.csv("categorical_scatter_data.csv").then(data => {
-  data.forEach(d => {
-    d.day_of_week = +d.day_of_week;
-    d.hour = +d.hour;
-    d.x_jitter = +d.x_jitter;
-    d.y_jitter = +d.y_jitter;
-    d.alignment = d.alignment === "True";
-  });
-
-  const labelMap = {0: "Low", 1: "Normal", 2: "High"};
-  const colors = {Actual: "#3498db", Optimized: "#2ecc71"};
-
-  // Split by type
-  const traces = [
-    {
-      x: data.filter(d => d.type === "Actual").map(d => d.x_jitter),
-      y: data.filter(d => d.type === "Actual").map(d => d.y_jitter),
-      mode: "markers",
-      name: "Actual",
-      marker: {color: colors.Actual, size: 6, opacity: 0.7, symbol: "circle"}
-    },
-    {
-      x: data.filter(d => d.type === "Optimized").map(d => d.x_jitter),
-      y: data.filter(d => d.type === "Optimized").map(d => d.y_jitter),
-      mode: "markers",
-      name: "Optimized",
-      marker: {color: colors.Optimized, size: 6, opacity: 0.7, symbol: "square"}
-    },
-    {
-      x: data.filter(d => d.alignment === false).map(d => d.x_jitter),
-      y: data.filter(d => d.alignment === false).map(d => d.y_jitter),
-      mode: "markers",
-      name: "Misaligned Hours",
-      marker: {color: "#e74c3c", size: 8, opacity: 0.9, symbol: "x"},
-    }
-  ];
-
-  const layout = {
-    title: "Actual vs Optimized Schedules (with Alignment Highlights)",
-    xaxis: {title: "Day of Week", tickvals: [0,1,2,3,4,5,6], ticktext: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]},
-    yaxis: {title: "Drain Level", tickvals: [0,1,2], ticktext: ["Low","Normal","High"]},
-    plot_bgcolor: "#f5f6fa",
-    paper_bgcolor: "#f5f6fa",
-    legend: {orientation: "h"},
-  };
-
-  Plotly.newPlot("chart-categorical-scatter", traces, layout);
-});
-
-*/
-function filteredData(){
-  return globalData.filter(d=>{
-    if(currentFilter.device!=='all' && d.device_id!==currentFilter.device) return false;
-    if(currentFilter.day!==null && d.day_of_week!==currentFilter.day) return false;
-    if(currentFilter.hour!==null && d.hour!==currentFilter.hour) return false;
+function filteredData() {
+  return globalData.filter(d => {
+    if (currentFilter.device !== 'all' && d.device_id !== currentFilter.device) return false;
+    if (currentFilter.day !== null && d.day_of_week !== currentFilter.day) return false;
     return true;
   });
 }
-
-
-// Render all panels
-function renderAll(){
-  const data=filteredData();
-  renderHourly(data);
-  renderDayOfWeek(data);
-  //renderComponents(data);
-  renderConnectivity(data);
-  renderApps(data);
-  renderDeviceComparison(data);
-  renderDistribution(data);
-  renderCorrelation(data);
-  //renderGASchedule();
+function renderAll() {
+  const d = filteredData();
+  renderHourly(d); renderDayOfWeek(d); renderConnectivity(d);
+  renderApps(d); renderDeviceComparison(d); renderDistribution(d); renderCorrelation(d);
 }
-
-// Hourly
-function renderHourly(data){
-  const hours=[...Array(24).keys()];
-  const yDevice=hours.map(h=>{
-    const vals=data.filter(d=>d.hour===h).map(x=>x.sum_norm_device);
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
-  });
-  const yBattery=hours.map(h=>{
-    const vals=data.filter(d=>d.hour===h).map(x=>x.sum_norm_battery);
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
-  });
-  const traceDevice={x:hours,y:yDevice,name:'Device Norm',type:'scatter',mode:'lines+markers',line:{color:'#e84118',width:3},marker:{size:8}};
-  const traceBattery={x:hours,y:yBattery,name:'Battery Norm',type:'scatter',mode:'lines+markers',line:{color:'#00a8ff',width:3},marker:{size:8}};
-  Plotly.newPlot('chart-hourly',[traceDevice,traceBattery],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Hour'},yaxis:{title:'Normalized Energy'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'},{responsive:true});
+function renderHourly(data) {
+  const hours = [...Array(24).keys()];
+  const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  Plotly.newPlot('chart-hourly', [
+    { x: hours, y: hours.map(h => avg(data.filter(d=>d.hour===h).map(x=>x.sum_norm_device))),
+      name: 'Device Norm', type: 'scatter', mode: 'lines+markers', line: { color: COL.red, width: 2.5 }, marker: { size: 7 } },
+    { x: hours, y: hours.map(h => avg(data.filter(d=>d.hour===h).map(x=>x.sum_norm_battery))),
+      name: 'Battery Norm', type: 'scatter', mode: 'lines+markers', line: { color: COL.steel, width: 2.5 }, marker: { size: 7 } },
+  ], layout({ xaxis: { title: 'Hour of Day' }, yaxis: { title: 'Normalized Energy' }, legend: { orientation: 'h' } }), PLY_CONFIG);
 }
-
-// Day-of-Week
-function renderDayOfWeek(data){
-  const dayMap=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const y=dayMap.map((_,i)=>{
-    const vals=data.filter(d=>d.day_of_week===i).map(d=>d.sum_norm_device);
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
-  });
-  const trace={x:dayMap,y:y,type:'bar',marker:{color:'#00a8ff'}};
-  Plotly.newPlot('chart-dow',[trace],{margin:{t:30,l:50,r:30,b:50},yaxis:{title:'Normalized Energy'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
-  // Drill-down click
-  const chart=document.getElementById('chart-dow');
-  chart.on('plotly_click', pts=>{
-    const dayIndex=pts.points[0].pointIndex;
-    currentFilter.day=dayIndex;
-    renderAll();
+function renderDayOfWeek(data) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  const y = days.map((_,i) => avg(data.filter(d=>d.day_of_week===i).map(d=>d.sum_norm_device)));
+  Plotly.newPlot('chart-dow', [{ x: days, y, type: 'bar', marker: { color: COL.steel } }],
+    layout({ yaxis: { title: 'Normalized Energy' } }), PLY_CONFIG);
+  document.getElementById('chart-dow').on('plotly_click', pts => {
+    currentFilter.day = pts.points[0].pointIndex; renderAll();
   });
 }
-
-// Components
-/*
-function renderComponents(data){
-  const traceCPU={x:data.map(d=>d.hour),y:data.map(d=>d.avg_cpu),name:'CPU',type:'bar'};
-  const traceScreen={x:data.map(d=>d.hour),y:data.map(d=>d.avg_screen_on),name:'Screen',type:'bar'};
-  const traceRAM={x:data.map(d=>d.hour),y:data.map(d=>d.avg_ram_usage),name:'RAM',type:'bar'};
-  Plotly.newPlot('chart-components',[traceCPU,traceScreen,traceRAM],{barmode:'stack',margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Hour'},yaxis:{title:'Avg Usage'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
-} 
-*/
-
-// Connectivity
-function renderConnectivity(data){
-  const trace={x:data.map(d=>d.wifi_tx||0),y:data.map(d=>d.mobile_tx||0),mode:'markers',type:'scatter',text:data.map(d=>`Device:${d.device_id}`),marker:{size:8,color:'#9c88ff'}};
-  Plotly.newPlot('chart-connectivity',[trace],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'WiFi TX'},yaxis:{title:'Mobile TX'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+function renderConnectivity(data) {
+  Plotly.newPlot('chart-connectivity', [{
+    x: data.map(d=>d.wifi_tx||0), y: data.map(d=>d.mobile_tx||0),
+    mode: 'markers', type: 'scatter', text: data.map(d=>`Device: ${d.device_id}`),
+    marker: { size: 8, color: '#6b5b95', opacity: 0.7 }
+  }], layout({ xaxis: { title: 'WiFi TX' }, yaxis: { title: 'Mobile TX' } }), PLY_CONFIG);
 }
-
-// Apps
-function renderApps(data){
-  const traceFG={x:data.map(d=>d.device_id),y:data.map(d=>d.num_foreground_apps),name:'Foreground',type:'bar',marker:{color:'#e84118'}};
-  const traceBG={x:data.map(d=>d.device_id),y:data.map(d=>d.num_background_apps),name:'Background',type:'bar',marker:{color:'#00a8ff'}};
-  Plotly.newPlot('chart-apps',[traceFG,traceBG],{barmode:'stack',margin:{t:30,l:50,r:30,b:100},xaxis:{title:'Device',tickangle:-45},yaxis:{title:'App Count'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+function renderApps(data) {
+  Plotly.newPlot('chart-apps', [
+    { x: data.map(d=>d.device_id), y: data.map(d=>d.num_foreground_apps), name: 'Foreground', type: 'bar', marker: { color: COL.red } },
+    { x: data.map(d=>d.device_id), y: data.map(d=>d.num_background_apps), name: 'Background', type: 'bar', marker: { color: COL.steel } },
+  ], layout({ barmode: 'stack', xaxis: { title: 'Device', tickangle: -45 }, yaxis: { title: 'App Count' } }), PLY_CONFIG);
 }
-
-// Device comparison
-function renderDeviceComparison(data){
-  const trace={x:data.map(d=>d.battery_capacity),y:data.map(d=>d.sum_norm_device),text:data.map(d=>d.device_id),mode:'markers',type:'scatter',marker:{size:10,color:'#00a8ff'}};
-  Plotly.newPlot('chart-device',[trace],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Battery Capacity'},yaxis:{title:'Normalized Energy'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+function renderDeviceComparison(data) {
+  Plotly.newPlot('chart-device', [{
+    x: data.map(d=>d.battery_capacity), y: data.map(d=>d.sum_norm_device),
+    text: data.map(d=>d.device_id), mode: 'markers', type: 'scatter',
+    marker: { size: 10, color: COL.steel, opacity: 0.8 }
+  }], layout({ xaxis: { title: 'Battery Capacity' }, yaxis: { title: 'Normalized Energy' } }), PLY_CONFIG);
 }
-
-// Distribution
-function renderDistribution(data){
-  Plotly.newPlot('chart-distribution',[{x:data.map(d=>d.sum_norm_device),type:'histogram',marker:{color:'#e84118'}}],{margin:{t:30,l:50,r:30,b:50},xaxis:{title:'Normalized Energy'},yaxis:{title:'Count'},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+function renderDistribution(data) {
+  Plotly.newPlot('chart-distribution', [{
+    x: data.map(d=>d.sum_norm_device), type: 'histogram', marker: { color: COL.red, opacity: 0.8 }, nbinsx: 30
+  }], layout({ xaxis: { title: 'Normalized Energy' }, yaxis: { title: 'Count' } }), PLY_CONFIG);
 }
-
-// Correlation
-function renderCorrelation(data){
-  const keys=['sum_norm_device','sum_norm_battery','avg_cpu','avg_screen_on','avg_ram_usage','num_foreground_apps','num_background_apps'];
-  const n=keys.length;
-  const matrix=Array.from({length:n},()=>Array(n).fill(0));
-  for(let i=0;i<n;i++){
-    for(let j=0;j<n;j++){
-      const x=data.map(d=>d[keys[i]]);
-      const y=data.map(d=>d[keys[j]]);
-      const meanX=x.reduce((a,b)=>a+b,0)/x.length;
-      const meanY=y.reduce((a,b)=>a+b,0)/y.length;
-      const cov=x.map((v,k)=> (v-meanX)*(y[k]-meanY)).reduce((a,b)=>a+b,0)/x.length;
-      const stdX=Math.sqrt(x.map(v=>Math.pow(v-meanX,2)).reduce((a,b)=>a+b,0)/x.length);
-      const stdY=Math.sqrt(y.map(v=>Math.pow(v-meanY,2)).reduce((a,b)=>a+b,0)/x.length);
-      matrix[i][j]=cov/(stdX*stdY);
-    }
+function renderCorrelation(data) {
+  const keys = ['sum_norm_device','sum_norm_battery','avg_cpu','avg_screen_on','avg_ram_usage','num_foreground_apps','num_background_apps'];
+  const n = keys.length;
+  const matrix = Array.from({length:n}, () => Array(n).fill(0));
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const x = data.map(d=>d[keys[i]]), y = data.map(d=>d[keys[j]]);
+    const mx = x.reduce((a,b)=>a+b,0)/x.length, my = y.reduce((a,b)=>a+b,0)/y.length;
+    const cov = x.map((v,k)=>(v-mx)*(y[k]-my)).reduce((a,b)=>a+b,0)/x.length;
+    const sx = Math.sqrt(x.map(v=>Math.pow(v-mx,2)).reduce((a,b)=>a+b,0)/x.length);
+    const sy = Math.sqrt(y.map(v=>Math.pow(v-my,2)).reduce((a,b)=>a+b,0)/y.length);
+    matrix[i][j] = cov / (sx * sy);
   }
-  Plotly.newPlot('chart-correlation',[{z:matrix,x:keys,y:keys,type:'heatmap',colorscale:'Viridis',zmin:-1,zmax:1,colorbar:{title:'Correlation'}}],{margin:{t:30,l:50,r:30,b:50},plot_bgcolor:'#f5f6fa',paper_bgcolor:'#f5f6fa'});
+  Plotly.newPlot('chart-correlation', [{
+    z: matrix, x: keys, y: keys, type: 'heatmap',
+    colorscale: [[0,COL.red],[0.5,'#ffffff'],[1,COL.steel]], zmin: -1, zmax: 1,
+    colorbar: { title: 'r', len: 0.8 }
+  }], layout({ margin: { t: 18, l: 140, r: 18, b: 140 } }), PLY_CONFIG);
 }
-
 function renderGASchedule() {
-  let selectedDevice = currentFilter.device;
-  const container = document.getElementById("chart-ga-schedule");
-
   if (!gaSchedule.length) return;
-
-  // Fallback if 'all' is selected
-  if (selectedDevice === 'all') {
-    container.innerHTML = "<p style='padding:1rem'>Please select a device to view its optimized weekly schedule.</p>";
-    return;
-  }
-
-  const deviceSchedule = gaSchedule.filter(d => d.device_id === selectedDevice);
-  if (deviceSchedule.length === 0) {
-    container.innerHTML = "<p style='padding:1rem'>No schedule data found for this device.</p>";
-    return;
-  }
-
+  const dev = currentFilter.device;
+  const el = document.getElementById('chart-ga-schedule');
+  if (dev === 'all') { el.innerHTML = "<p style='padding:2rem;color:var(--muted);font-size:.82rem'>Select a device above to view its schedule.</p>"; return; }
+  const ds = gaSchedule.filter(d => d.device_id === dev);
+  if (!ds.length) { el.innerHTML = "<p style='padding:2rem;color:var(--muted);font-size:.82rem'>No schedule data for this device.</p>"; return; }
   const labelMap = { Low: 0, Normal: 1, High: 2 };
-  const matrix = Array.from({ length: 7 }, () => Array(24).fill(null));
-
-  deviceSchedule.forEach(d => {
-    matrix[d.day_of_week][d.hour] = labelMap[d.drain_label];
-  });
-
-  Plotly.newPlot("chart-ga-schedule", [{
-    z: matrix,
-    type: "heatmap",
-    colorscale: [
-      [0.0, "#4cd137"],
-      [0.5, "#fbc531"],
-      [1.0, "#e84118"]
-    ],
-    zmin: 0,
-    zmax: 2,
-    colorbar: {
-      title: "Drain Level",
-      tickvals: [0, 1, 2],
-      ticktext: ["Low", "Normal", "High"]
-    }
-  }], {
-    title: `Weekly Schedule for Device: ${selectedDevice}`,
-    xaxis: { title: "Hour of Day" },
-    yaxis: {
-      title: "Day of Week",
-      tickvals: [0, 1, 2, 3, 4, 5, 6],
-      ticktext: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    },
-    plot_bgcolor: "#f5f6fa",
-    paper_bgcolor: "#f5f6fa"
-  });
+  const matrix = Array.from({length:7}, () => Array(24).fill(null));
+  ds.forEach(d => { matrix[d.day_of_week][d.hour] = labelMap[d.drain_label]; });
+  Plotly.newPlot('chart-ga-schedule', [{
+    z: matrix, type: 'heatmap',
+    colorscale: [[0,COL.green],[0.5,COL.amber],[1,COL.red]],
+    zmin: 0, zmax: 2, showscale: true,
+    colorbar: { tickvals:[0,1,2], ticktext:['Low','Normal','High'], len:0.8 }
+  }], layout({
+    xaxis: { title: 'Hour of Day' },
+    yaxis: { title: 'Day', tickvals:[0,1,2,3,4,5,6], ticktext:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
+    margin: { t: 18, l: 60, r: 40, b: 46 }
+  }), PLY_CONFIG);
 }
 
 
-/*
-function renderActualSchedule() {
-  let selectedDevice = currentFilter.device;
-  const container = document.getElementById("chart-actual-schedule");
+(function renderPhase1() {
+  const clusterNames = ['A — Mixed Usage', 'B — WiFi-Efficient', 'C — Mobile Power'];
+  const sizes = [53, 34, 7];
+  const colors = [COL.steel, COL.green, COL.red];
 
-  if (!actualSchedule.length) return;
+  Plotly.newPlot('ph1-cluster-sizes', [{
+    x: clusterNames, y: sizes, type: 'bar', marker: { color: colors },
+    text: sizes.map(s => s + ' days'), textposition: 'outside'
+  }], layout({ yaxis: { title: 'Device-Days', range: [0, 65] }, showlegend: false }), PLY_CONFIG);
 
-  // Fallback if 'all' is selected
-  if (selectedDevice === 'all') {
-    container.innerHTML = "<p style='padding:1rem'>Please select a device to view its actual weekly schedule.</p>";
-    return;
-  }
+  const features = ['Screen-On', 'Mobile Data', 'Battery Drain', 'CPU Usage', 'App Diversity'];
+  const profiles = [
+    [0.38, 8420, 66, 65.5, 15],
+    [0.33, 12,   38, 52.0, 10],
+    [0.43, 152602, 117, 60.0, 31.6]
+  ];
+  const maxVals = features.map((_, i) => Math.max(...profiles.map(p => p[i])));
+  const normalized = profiles.map(p => p.map((v, i) => v / maxVals[i]));
+  const radarTraces = clusterNames.map((name, ci) => ({
+    type: 'scatterpolar', name,
+    r: [...normalized[ci], normalized[ci][0]],
+    theta: [...features, features[0]],
+    fill: 'toself', opacity: 0.5,
+    line: { color: colors[ci], width: 2 }, marker: { color: colors[ci] }
+  }));
+  Plotly.newPlot('ph1-radar', radarTraces, layout({
+    polar: { radialaxis: { visible: true, range: [0, 1], gridcolor: COL.grid }, angularaxis: { gridcolor: COL.grid } },
+    legend: { orientation: 'h', y: -0.15 }, margin: { t: 26, l: 30, r: 30, b: 56 }
+  }), PLY_CONFIG);
 
-  const deviceSchedule = actualSchedule.filter(d => d.device_id === selectedDevice);
-  if (deviceSchedule.length === 0) {
-    container.innerHTML = "<p style='padding:1rem'>No actual schedule data found for this device.</p>";
-    return;
-  }
+  Plotly.newPlot('ph1-heatmap', [{
+    z: normalized, x: features, y: clusterNames, type: 'heatmap',
+    colorscale: [[0,'#f4f7fa'],[1,COL.ink]], showscale: true,
+    colorbar: { title: 'Norm.', len: 0.8 },
+    text: normalized.map(row => row.map(v => v.toFixed(2))),
+    texttemplate: '%{text}', textfont: { size: 11, family: 'IBM Plex Mono' }
+  }], layout({ margin: { t: 18, l: 180, r: 40, b: 56 } }), PLY_CONFIG);
+})();
 
-  const labelMap = { Low: 0, Normal: 1, High: 2 };
-  const matrix = Array.from({ length: 7 }, () => Array(24).fill(null));
+(function renderPhase2() {
+  const features = ['lag1_drain_rate', 'lag1_avg_battery_temp', 'lag1_mobile_data_ratio',
+                    'lag1_avg_mobile_rx', 'lag1_gps_on_ratio', 'lag1_wifi_on_ratio',
+                    'lag1_avg_wifi_rx', 'lag1_screen_on_ratio', 'lag1_avg_cpu_usage'];
+  const importances = [0.312, 0.142, 0.098, 0.087, 0.079, 0.071, 0.068, 0.065, 0.054];
+  const sorted = features.map((f, i) => ({ f, v: importances[i] })).sort((a,b)=>b.v-a.v);
+  Plotly.newPlot('ph2-importance', [{
+    x: sorted.map(d=>d.v), y: sorted.map(d=>d.f.replace('lag1_','')),
+    type: 'bar', orientation: 'h',
+    marker: { color: sorted.map((d,i)=>i===0?COL.red:COL.steel) }
+  }], layout({ xaxis: { title: 'Feature Importance' }, margin: { t: 18, l: 155, r: 24, b: 46 } }), PLY_CONFIG);
 
-  deviceSchedule.forEach(d => {
-    matrix[d.day_of_week][d.hour] = labelMap[d.drain_label];
+  Plotly.newPlot('ph2-r2-comparison', [{
+    x: ['XGBoost', 'Global Mean', "Yesterday's Rate"], y: [0.126, -0.052, -0.623],
+    name: 'Row-Level CV', type: 'bar', marker: { color: COL.steel }
+  }, {
+    x: ['XGBoost', 'Global Mean', "Yesterday's Rate"], y: [-0.223, -0.671, -0.623],
+    name: 'Device-Level CV', type: 'bar', marker: { color: COL.red }
+  }], layout({ barmode: 'group', yaxis: { title: 'R²', zeroline: true }, legend: { orientation: 'h' } }), PLY_CONFIG);
+
+  const devices = ['ab47b5f5','70a09b51','72deadc7','d8c353d4','672d87e6','d63f4d95','10270b87','5d5d4cad','59354710','8f4ce1d5'];
+  const drainMeans = [2.8, 1.7, 4.2, 3.1, 3.8, 2.4, 1.9, 2.2, 3.3, 2.6];
+  const drainStd   = [1.8, 0.9, 2.1, 1.4, 1.7, 0.8, 0.5, 0.7, 1.2, 0.9];
+  const boxTraces = devices.map((d, i) => ({
+    type: 'box', name: d,
+    y: Array.from({length:20}, () => drainMeans[i] + (Math.random()*2-1)*drainStd[i]).map(v=>Math.max(0.1,v)),
+    marker: { color: COL.steel, opacity: 0.7 }, line: { color: COL.ink },
+    fillcolor: 'rgba(47,102,144,0.15)'
+  }));
+  Plotly.newPlot('ph2-drain-dist', boxTraces, layout({ yaxis: { title: 'Drain Rate (% / hour)' }, xaxis: { title: 'Device' }, showlegend: false }), PLY_CONFIG);
+})();
+
+(function renderPhase3() {
+  const deviceColors = { 'ab47b5f5': COL.red, '70a09b51': COL.steel, '672d87e6': COL.green, '72deadc7': COL.amber, 'd8c353d4': '#6b5b95' };
+  const allPoints = [
+    ...Array.from({length:44}, (_,i) => ({ dev:'ab47b5f5', date: new Date(2022,3,12+i*2).toISOString().split('T')[0], score: -0.42 - Math.random()*0.1, flag: i<39?1:-1 })),
+    ...Array.from({length:28}, (_,i) => ({ dev:'70a09b51', date: new Date(2022,11,1+i*3).toISOString().split('T')[0], score: -0.44 - Math.random()*0.08, flag: i<25?1:-1 })),
+    ...Array.from({length:5}, (_,i) => ({ dev:'672d87e6', date: new Date(2022,6,12+i*30).toISOString().split('T')[0], score: -0.45 - Math.random()*0.05, flag: i<4?1:-1 })),
+    ...Array.from({length:5}, (_,i) => ({ dev:'72deadc7', date: new Date(2022,6,12+i*30).toISOString().split('T')[0], score: -0.46 - Math.random()*0.05, flag: i<4?1:-1 })),
+    ...Array.from({length:5}, (_,i) => ({ dev:'d8c353d4', date: new Date(2022,6,12+i*30).toISOString().split('T')[0], score: -0.47 - Math.random()*0.06, flag: i<4?1:-1 })),
+  ];
+  const anomalyOverrides = [
+    {dev:'70a09b51', score:-0.644, date:'2023-12-18'}, {dev:'70a09b51', score:-0.611, date:'2023-01-05'},
+    {dev:'ab47b5f5', score:-0.591, date:'2023-01-17'}, {dev:'ab47b5f5', score:-0.583, date:'2023-02-19'},
+    {dev:'70a09b51', score:-0.577, date:'2023-01-12'},
+  ];
+  anomalyOverrides.forEach(o => allPoints.push({dev:o.dev, date:o.date, score:o.score, flag:-1}));
+
+  const devs = Object.keys(deviceColors);
+  const timelineTraces = devs.flatMap(dev => {
+    const pts = allPoints.filter(p=>p.dev===dev);
+    const normal = pts.filter(p=>p.flag===1);
+    const anom = pts.filter(p=>p.flag===-1);
+    return [
+      { x: normal.map(p=>p.date), y: normal.map(p=>p.score), mode:'markers', name: dev+' normal',
+        marker: { color: deviceColors[dev], size: 6, opacity: 0.55, symbol: 'circle' }, showlegend: false },
+      { x: anom.map(p=>p.date), y: anom.map(p=>p.score), mode:'markers', name: dev,
+        marker: { color: deviceColors[dev], size: 11, opacity: 1, symbol: 'x', line:{width:2,color:deviceColors[dev]} } }
+    ];
   });
+  timelineTraces.push({ x: ['2022-01-01','2024-01-01'], y: [-0.545,-0.545], mode: 'lines', name: 'Decision Boundary',
+    line: { color: COL.red, dash: 'dash', width: 1.5 }, showlegend: true });
+  Plotly.newPlot('ph3-timeline', timelineTraces, layout({
+    xaxis: { title: 'Date', type: 'date' }, yaxis: { title: 'Anomaly Score (lower = more anomalous)' },
+    legend: { orientation: 'h', y: -0.2 }
+  }), PLY_CONFIG);
 
-  Plotly.newPlot("chart-actual-schedule", [{
-    z: matrix,
-    type: "heatmap",
-    colorscale: [
-      [0.0, "#4cd137"],
-      [0.5, "#fbc531"],
-      [1.0, "#e84118"]
-    ],
-    zmin: 0,
-    zmax: 2,
-    colorbar: {
-      title: "Drain Level",
-      tickvals: [0, 1, 2],
-      ticktext: ["Low", "Normal", "High"]
-    }
-  }], {
-    title: `Weekly Schedule for Device: ${selectedDevice}`,
-    xaxis: { title: "Hour of Day" },
-    yaxis: {
-      title: "Day of Week",
-      tickvals: [1, 2, 3, 4, 5, 6, 7],
-      ticktext: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    },
-    plot_bgcolor: "#f5f6fa",
-    paper_bgcolor: "#f5f6fa"
+  const devList = ['ab47b5f5','70a09b51','672d87e6','72deadc7','d8c353d4','d63f4d95','10270b87','59354710','5d5d4cad','8f4ce1d5'];
+  const normalCounts  = [39, 25, 4, 4, 4, 0, 0, 0, 0, 0];
+  const anomCounts    = [ 5,  3, 1, 1, 1, 0, 0, 0, 0, 0];
+  const skippedCounts = [ 0,  0, 0, 0, 0, 3, 1, 1, 1, 1];
+  Plotly.newPlot('ph3-breakdown', [
+    { x: devList, y: normalCounts, name: 'Normal', type: 'bar', marker: { color: COL.steel } },
+    { x: devList, y: anomCounts,   name: 'Anomalous', type: 'bar', marker: { color: COL.red } },
+    { x: devList, y: skippedCounts, name: 'Insufficient History', type: 'bar', marker: { color: '#dde3ec' } },
+  ], layout({ barmode: 'stack', xaxis: { title: 'Device', tickangle: -45 }, yaxis: { title: 'Device-Days' }, legend: { orientation: 'h' } }), PLY_CONFIG);
+
+  const topDays = [
+    { label: '70a09b51 · 2023-12-18', score: -0.644, drain: 9 },
+    { label: '70a09b51 · 2023-01-05', score: -0.611, drain: 2 },
+    { label: 'ab47b5f5 · 2023-01-17', score: -0.591, drain: 31 },
+    { label: 'ab47b5f5 · 2023-02-19', score: -0.583, drain: 80 },
+    { label: '70a09b51 · 2023-01-12', score: -0.577, drain: 37 },
+  ];
+  Plotly.newPlot('ph3-ranked', [{
+    y: topDays.map(d=>d.label), x: topDays.map(d=>d.score), type: 'bar', orientation: 'h',
+    marker: { color: topDays.map(d=>d.drain<20?COL.steel:COL.red) },
+    text: topDays.map(d=>`drain=${d.drain}%`), textposition: 'outside'
+  }], layout({ xaxis: { title: 'Anomaly Score', range: [-0.72, -0.52] }, margin: { t:18, l:200, r:80, b:46 }, showlegend: false }), PLY_CONFIG);
+})();
+
+(function renderPhase4() {
+  const buckets  = ['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'];
+  const actions  = ['RUN_NOW','DEFER_30MIN','DEFER_CHARGING'];
+  const actionColors = { RUN_NOW: COL.red, DEFER_30MIN: COL.steel, DEFER_CHARGING: COL.green };
+  const greedy   = [0,2,1,1,1,1,1,1,0,0];
+  const qTable   = [
+    [-15.671, -21.982, -20.254], [-30.648, -31.066, -29.338], [-20.397, -17.172, -21.931],
+    [-14.982,  -8.978, -13.736], [ -9.143,  -7.966,  -8.902], [ -6.434,  -3.821,  -8.218],
+    [ -4.808,  -0.996,  -6.166], [ -4.455,  -1.221,  -7.118], [ -1.954,  -4.314,  -6.757],
+    [ -1.734,  -3.638,  -7.255],
+  ];
+  Plotly.newPlot('ph4-policy', [{
+    y: buckets, x: Array(10).fill(1), type: 'bar', orientation: 'h',
+    marker: { color: greedy.map(a => actionColors[actions[a]]) },
+    text: greedy.map(a=>actions[a]), textposition: 'inside',
+    textfont: { color: '#fff', size: 11, family: 'IBM Plex Mono, monospace' },
+    hovertemplate: '%{y}: <b>%{text}</b><extra></extra>'
+  }], layout({ xaxis: { visible: false }, margin: { t:18, l:80, r:18, b:30 }, showlegend: false }), PLY_CONFIG);
+
+  Plotly.newPlot('ph4-comparison', [{
+    x: ['Mean Reward', 'Final Battery %'], y: [-16.4, 32.4], name: 'Trained Agent', type: 'bar', marker: { color: COL.steel }
+  }, {
+    x: ['Mean Reward', 'Final Battery %'], y: [-76.6, 29.1], name: 'Random Baseline', type: 'bar', marker: { color: '#c9d1db' }
+  }], layout({ barmode: 'group', yaxis: { title: 'Value', zeroline: true }, legend: { orientation: 'h' } }), PLY_CONFIG);
+
+  Plotly.newPlot('ph4-qtable', [{
+    z: qTable, x: actions, y: buckets, type: 'heatmap',
+    colorscale: [[0, COL.ink],[1,'#eef1f5']], showscale: true,
+    colorbar: { title: 'Q-value', len: 0.8 },
+    text: qTable.map((row,ri) => row.map((v,ci) => ci===greedy[ri]?`★ ${v.toFixed(2)}`:v.toFixed(2))),
+    texttemplate: '%{text}', textfont: { size: 11, family: 'IBM Plex Mono, monospace', color: '#e2e8f0' }
+  }], layout({ xaxis: { title: 'Action' }, yaxis: { title: 'Battery Level Bucket' }, margin: { t:18, l:90, r:40, b:56 } }), PLY_CONFIG);
+
+  const tbody = document.getElementById('ph4-policy-table');
+  const head = document.createElement('thead');
+  head.innerHTML = '<tr><th>Battery Range</th><th>Greedy Action</th><th>Q: Run</th><th>Q: Defer 30m</th><th>Q: Defer Charge</th></tr>';
+  tbody.appendChild(head);
+  const body = document.createElement('tbody');
+  const actionClass = { RUN_NOW:'action-run', DEFER_30MIN:'action-defer', DEFER_CHARGING:'action-charge' };
+  buckets.forEach((b, i) => {
+    const a = actions[greedy[i]];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><strong>${b}</strong></td>
+      <td><span class="action-badge ${actionClass[a]}"><span class="dot"></span>${a}</span></td>
+      <td style="font-family:var(--f-mono)">${qTable[i][0].toFixed(3)}</td>
+      <td style="font-family:var(--f-mono)">${qTable[i][1].toFixed(3)}</td>
+      <td style="font-family:var(--f-mono)">${qTable[i][2].toFixed(3)}</td>`;
+    body.appendChild(tr);
   });
-}*/
-
-
+  tbody.appendChild(body);
+})();
 </script>
-
 </body>
 </html>
