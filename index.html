@@ -408,17 +408,17 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="page-title">Phase 1 — Usage Persona Clustering</div>
       <div class="page-desc">K-Means groups device-days into usage archetypes based on screen, network, battery, and CPU behavior.</div>
       <div class="telemetry-strip">
-        <span class="seg">MODEL: K-MEANS (k=3)</span><span class="sep">/</span>
-        <span class="seg">N=94 DEVICE-DAYS</span><span class="sep">/</span>
-        <span class="seg">SILHOUETTE: 0.23</span><span class="sep">/</span>
+        <span class="seg" id="ph1-strip-k">MODEL: K-MEANS</span><span class="sep">/</span>
+        <span class="seg" id="ph1-strip-n">N=… DEVICE-DAYS</span><span class="sep">/</span>
+        <span class="seg" id="ph1-strip-sil">SILHOUETTE: …</span><span class="sep">/</span>
         <span class="seg"><span class="status-dot amber"></span><span class="status-text amber">PRELIMINARY — DEVICE-COUNT LIMITED</span></span>
       </div>
     </div>
     <div class="kpi-strip">
-      <div class="kpi-card"><div class="kpi-value" data-target="3">0</div><div class="kpi-label">Personas Detected</div></div>
-      <div class="kpi-card green"><div class="kpi-value" data-target="94">0</div><div class="kpi-label">Device-Days Clustered</div></div>
-      <div class="kpi-card amber"><div class="kpi-value" data-target="0.23" data-decimals="2">0</div><div class="kpi-label">Best Silhouette Score</div></div>
-      <div class="kpi-card red"><div class="kpi-value" data-target="10">0</div><div class="kpi-label">Unique Devices</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Personas Detected</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Device-Days Clustered</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="0" data-decimals="2">0</div><div class="kpi-label">Best Silhouette Score</div></div>
+      <div class="kpi-card red"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Unique Devices</div></div>
     </div>
     <div class="chart-grid">
       <div class="panel">
@@ -445,26 +445,26 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="page-desc">XGBoost regression predicts battery discharge rate from prior-day usage features to estimate Time to Empty.</div>
       <div class="telemetry-strip">
         <span class="seg">MODEL: XGBOOST (LAGGED)</span><span class="sep">/</span>
-        <span class="seg">N=40 TRAIN ROWS</span><span class="sep">/</span>
-        <span class="seg">R² (DEVICE-CV): −0.22</span><span class="sep">/</span>
-        <span class="seg"><span class="status-dot red"></span><span class="status-text red">NOT PRODUCTION READY — BELOW BASELINE</span></span>
+        <span class="seg" id="ph2-strip-n">N=… TRAIN ROWS</span><span class="sep">/</span>
+        <span class="seg" id="ph2-strip-r2">R² (DEVICE-CV): …</span><span class="sep">/</span>
+        <span class="seg"><span class="status-dot red" id="ph2-status-dot"></span><span class="status-text red" id="ph2-status-text">AWAITING DATA</span></span>
       </div>
     </div>
     <div class="kpi-strip">
-      <div class="kpi-card amber"><div class="kpi-value" data-target="0.126" data-decimals="3">0</div><div class="kpi-label">R² (Row-Level CV)</div></div>
-      <div class="kpi-card red"><div class="kpi-value" data-target="-0.22" data-decimals="2">0</div><div class="kpi-label">R² (Device-Level CV)</div></div>
-      <div class="kpi-card"><div class="kpi-value" data-target="0.914" data-decimals="3">0</div><div class="kpi-label">MAE (pct-pts/hr)</div></div>
-      <div class="kpi-card green"><div class="kpi-value" data-target="40">0</div><div class="kpi-label">Training Rows (Strict Lag)</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="0" data-decimals="3">0</div><div class="kpi-label">R² (Row-Level CV)</div></div>
+      <div class="kpi-card red"><div class="kpi-value" data-target="0" data-decimals="2">0</div><div class="kpi-label">R² (Device-Level CV)</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="0" data-decimals="3">0</div><div class="kpi-label">MAE (pct-pts/hr)</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Training Rows (Strict Lag)</div></div>
     </div>
     <div class="chart-grid">
       <div class="panel">
         <div class="panel-title">Feature Importances</div>
-        <div class="panel-subtitle">Which prior-day signals drive the drain-rate prediction most. Yesterday's own rate dominates.</div>
+        <div class="panel-subtitle" id="ph2-imp-sub">Which prior-day signals drive the drain-rate prediction most.</div>
         <div id="ph2-importance" class="chart-box"></div>
       </div>
       <div class="panel">
         <div class="panel-title">Row-Level vs Device-Level R²</div>
-        <div class="panel-subtitle">The gap between bars shows the model partly memorizing per-device baselines.</div>
+        <div class="panel-subtitle">XGBoost drops sharply from row-level to device-level testing, and is compared against naive baselines on unseen devices.</div>
         <div id="ph2-r2-comparison" class="chart-box"></div>
       </div>
       <div class="panel full">
@@ -482,15 +482,15 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="telemetry-strip">
         <span class="seg">MODEL: ISOLATION FOREST</span><span class="sep">/</span>
         <span class="seg">BASELINE: PER-DEVICE HISTORY</span><span class="sep">/</span>
-        <span class="seg">11 FLAGGED / 94</span><span class="sep">/</span>
+        <span class="seg" id="ph3-strip-flag">… FLAGGED</span><span class="sep">/</span>
         <span class="seg"><span class="status-dot green"></span><span class="status-text green">RELIABLE AT CURRENT SCALE</span></span>
       </div>
     </div>
     <div class="kpi-strip">
-      <div class="kpi-card red"><div class="kpi-value" data-target="11">0</div><div class="kpi-label">Anomalous Days Flagged</div></div>
-      <div class="kpi-card green"><div class="kpi-value" data-target="5">0</div><div class="kpi-label">Eligible Devices</div></div>
-      <div class="kpi-card amber"><div class="kpi-value" data-target="5">0</div><div class="kpi-label">Devices Skipped (Low History)</div></div>
-      <div class="kpi-card"><div class="kpi-value" data-target="3">0</div><div class="kpi-label">Double-Flagged (Both Checks)</div></div>
+      <div class="kpi-card red"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Anomalous Days Flagged</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Eligible Devices</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Devices Skipped (Low History)</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Double-Flagged (Both Checks)</div></div>
     </div>
     <div class="chart-grid">
       <div class="panel full">
@@ -518,15 +518,15 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="telemetry-strip">
         <span class="seg">MODEL: TABULAR Q-LEARNING</span><span class="sep">/</span>
         <span class="seg">STATE: 10 BUCKETS × 3 ACTIONS</span><span class="sep">/</span>
-        <span class="seg">500 EPISODES</span><span class="sep">/</span>
+        <span class="seg" id="ph4-strip-ep">… EPISODES</span><span class="sep">/</span>
         <span class="seg"><span class="status-dot green"></span><span class="status-text green">SIMULATION VALIDATED</span></span>
       </div>
     </div>
     <div class="kpi-strip">
-      <div class="kpi-card green"><div class="kpi-value" data-target="78.5" data-decimals="1">0</div><div class="kpi-label">% Reward Improvement vs Random</div></div>
-      <div class="kpi-card"><div class="kpi-value" data-target="3.3" data-decimals="1" data-prefix="+">0</div><div class="kpi-label">Battery % Saved vs Random</div></div>
-      <div class="kpi-card amber"><div class="kpi-value" data-target="500">0</div><div class="kpi-label">Training Episodes</div></div>
-      <div class="kpi-card"><div class="kpi-value" data-target="30">0</div><div class="kpi-label">Q-Table Values (10×3)</div></div>
+      <div class="kpi-card green"><div class="kpi-value" data-target="0" data-decimals="1">0</div><div class="kpi-label">% Reward Improvement vs Random</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="0" data-decimals="1" data-prefix="+">0</div><div class="kpi-label">Battery % Saved vs Random</div></div>
+      <div class="kpi-card amber"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Training Episodes</div></div>
+      <div class="kpi-card"><div class="kpi-value" data-target="0">0</div><div class="kpi-label">Q-Table Values (10×3)</div></div>
     </div>
     <div class="chart-grid">
       <div class="panel">
@@ -578,14 +578,14 @@ function switchView(view) {
   if (view === 'aiml') animateKPIs();
 }
 function activateTab(tabId, el) {
-  const viewEl = el.closest('.view');
-  viewEl.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  const navGroup = el.closest('[id^="nav-"]');
+  const viewId = navGroup.id === 'nav-exploration' ? 'view-exploration' : 'view-aiml';
+  document.getElementById(viewId).querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
   const target = document.getElementById(tabId);
   if (target) target.style.display = '';
-  const navGroup = el.closest('[id^="nav-"]');
   navGroup.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   el.classList.add('active');
-  if (document.getElementById('view-aiml').classList.contains('active')) animateKPIs();
+  if (viewId === 'view-aiml') animateKPIs();
 }
 function showTab(viewId, tabId) {
   const view = document.getElementById(viewId);
@@ -792,187 +792,292 @@ function renderGASchedule() {
 }
 
 
+function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+function showMissing(ids, msg) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "<p style='padding:1.5rem;color:var(--muted);font-size:.8rem'>" + msg + "</p>";
+  });
+}
+function refreshKPIsIfVisible() {
+  if (document.getElementById('view-aiml').classList.contains('active')) animateKPIs();
+}
+
+/* ─── PHASE 1: reads phase1_results.json ─────────── */
 (function renderPhase1() {
-  const clusterNames = ['A — Mixed Usage', 'B — WiFi-Efficient', 'C — Mobile Power'];
-  const sizes = [53, 34, 7];
-  const colors = [COL.steel, COL.green, COL.red];
+  d3.json("phase1_results.json").catch(() => null).then(results => {
+    if (!results) {
+      console.warn("phase1_results.json not found. Run export_dashboard_data.py.");
+      showMissing(['ph1-cluster-sizes', 'ph1-radar', 'ph1-heatmap'],
+        "phase1_results.json not found. Run <code>python3 export_dashboard_data.py</code> in this folder, then reload.");
+      return;
+    }
 
-  Plotly.newPlot('ph1-cluster-sizes', [{
-    x: clusterNames, y: sizes, type: 'bar', marker: { color: colors },
-    text: sizes.map(s => s + ' days'), textposition: 'outside'
-  }], layout({ yaxis: { title: 'Device-Days', range: [0, 65] }, showlegend: false }), PLY_CONFIG);
+    const clusterIds = Object.keys(results.cluster_sizes).sort();
+    const sizes = clusterIds.map(id => results.cluster_sizes[id]);
 
-  const features = ['Screen-On', 'Mobile Data', 'Battery Drain', 'CPU Usage', 'App Diversity'];
-  const profiles = [
-    [0.38, 8420, 66, 65.5, 15],
-    [0.33, 12,   38, 52.0, 10],
-    [0.43, 152602, 117, 60.0, 31.6]
-  ];
-  const maxVals = features.map((_, i) => Math.max(...profiles.map(p => p[i])));
-  const normalized = profiles.map(p => p.map((v, i) => v / maxVals[i]));
-  const radarTraces = clusterNames.map((name, ci) => ({
-    type: 'scatterpolar', name,
-    r: [...normalized[ci], normalized[ci][0]],
-    theta: [...features, features[0]],
-    fill: 'toself', opacity: 0.5,
-    line: { color: colors[ci], width: 2 }, marker: { color: colors[ci] }
-  }));
-  Plotly.newPlot('ph1-radar', radarTraces, layout({
-    polar: { radialaxis: { visible: true, range: [0, 1], gridcolor: COL.grid }, angularaxis: { gridcolor: COL.grid } },
-    legend: { orientation: 'h', y: -0.15 }, margin: { t: 26, l: 30, r: 30, b: 56 }
-  }), PLY_CONFIG);
+    // Name clusters by ranking their real mobile-data usage (robust to cluster ID order)
+    const names = {};
+    const mobileIdx = results.radar_features.indexOf('avg_mobile_rx');
+    if (mobileIdx >= 0 && clusterIds.length > 1) {
+      const ranked = clusterIds.slice().sort((a, b) =>
+        results.cluster_profiles[b][mobileIdx] - results.cluster_profiles[a][mobileIdx]);
+      clusterIds.forEach(id => {
+        if (id === ranked[0]) names[id] = `C${id} — Mobile Power`;
+        else if (id === ranked[ranked.length - 1]) names[id] = `C${id} — WiFi-Efficient`;
+        else names[id] = `C${id} — Mixed Usage`;
+      });
+    } else {
+      clusterIds.forEach(id => names[id] = `Cluster ${id}`);
+    }
+    const clusterNames = clusterIds.map(id => names[id]);
+    const palette = [COL.steel, COL.green, COL.red, COL.amber, '#6b5b95'];
+    const colors = clusterIds.map((_, i) => palette[i % palette.length]);
 
-  Plotly.newPlot('ph1-heatmap', [{
-    z: normalized, x: features, y: clusterNames, type: 'heatmap',
-    colorscale: [[0,'#f4f7fa'],[1,COL.ink]], showscale: true,
-    colorbar: { title: 'Norm.', len: 0.8 },
-    text: normalized.map(row => row.map(v => v.toFixed(2))),
-    texttemplate: '%{text}', textfont: { size: 11, family: 'IBM Plex Mono' }
-  }], layout({ margin: { t: 18, l: 180, r: 40, b: 56 } }), PLY_CONFIG);
+    const kpis = document.querySelectorAll('#ph1 .kpi-value');
+    kpis[0].dataset.target = results.n_clusters;
+    kpis[1].dataset.target = results.n_device_days;
+    kpis[2].dataset.target = results.silhouette_score;
+    kpis[3].dataset.target = results.n_unique_devices;
+    setText('ph1-strip-k', `MODEL: K-MEANS (k=${results.n_clusters})`);
+    setText('ph1-strip-n', `N=${results.n_device_days} DEVICE-DAYS`);
+    setText('ph1-strip-sil', `SILHOUETTE: ${results.silhouette_score.toFixed(3)}`);
+
+    Plotly.newPlot('ph1-cluster-sizes', [{
+      x: clusterNames, y: sizes, type: 'bar', marker: { color: colors },
+      text: sizes.map(s => s + ' days'), textposition: 'outside'
+    }], layout({ yaxis: { title: 'Device-Days', range: [0, Math.max(...sizes) * 1.25] }, showlegend: false }), PLY_CONFIG);
+
+    const features = results.radar_features;
+    const profiles = clusterIds.map(id => results.cluster_profiles[id]);
+    const maxVals = features.map((_, i) => Math.max(...profiles.map(p => p[i])));
+    const normalized = profiles.map(p => p.map((v, i) => maxVals[i] ? v / maxVals[i] : 0));
+
+    Plotly.newPlot('ph1-radar', clusterNames.map((name, ci) => ({
+      type: 'scatterpolar', name,
+      r: [...normalized[ci], normalized[ci][0]],
+      theta: [...features, features[0]],
+      fill: 'toself', opacity: 0.5,
+      line: { color: colors[ci], width: 2 }, marker: { color: colors[ci] }
+    })), layout({
+      polar: { radialaxis: { visible: true, range: [0, 1], gridcolor: COL.grid }, angularaxis: { gridcolor: COL.grid } },
+      legend: { orientation: 'h', y: -0.15 }, margin: { t: 26, l: 40, r: 40, b: 56 }
+    }), PLY_CONFIG);
+
+    Plotly.newPlot('ph1-heatmap', [{
+      z: normalized, x: features, y: clusterNames, type: 'heatmap',
+      colorscale: [[0, '#f4f7fa'], [1, COL.ink]], showscale: true,
+      colorbar: { title: 'Norm.', len: 0.8 },
+      text: normalized.map(row => row.map(v => v.toFixed(2))),
+      texttemplate: '%{text}', textfont: { size: 11, family: 'IBM Plex Mono' }
+    }], layout({ margin: { t: 18, l: 150, r: 40, b: 56 } }), PLY_CONFIG);
+
+    refreshKPIsIfVisible();
+  });
 })();
 
+/* ─── PHASE 2: reads phase2_results.json ─────────── */
 (function renderPhase2() {
-  const features = ['lag1_drain_rate', 'lag1_avg_battery_temp', 'lag1_mobile_data_ratio',
-                    'lag1_avg_mobile_rx', 'lag1_gps_on_ratio', 'lag1_wifi_on_ratio',
-                    'lag1_avg_wifi_rx', 'lag1_screen_on_ratio', 'lag1_avg_cpu_usage'];
-  const importances = [0.312, 0.142, 0.098, 0.087, 0.079, 0.071, 0.068, 0.065, 0.054];
-  const sorted = features.map((f, i) => ({ f, v: importances[i] })).sort((a,b)=>b.v-a.v);
-  Plotly.newPlot('ph2-importance', [{
-    x: sorted.map(d=>d.v), y: sorted.map(d=>d.f.replace('lag1_','')),
-    type: 'bar', orientation: 'h',
-    marker: { color: sorted.map((d,i)=>i===0?COL.red:COL.steel) }
-  }], layout({ xaxis: { title: 'Feature Importance' }, margin: { t: 18, l: 155, r: 24, b: 46 } }), PLY_CONFIG);
+  d3.json("phase2_results.json").catch(() => null).then(results => {
+    if (!results) {
+      console.warn("phase2_results.json not found. Run export_dashboard_data.py.");
+      showMissing(['ph2-importance', 'ph2-r2-comparison', 'ph2-drain-dist'],
+        "phase2_results.json not found. Run <code>python3 export_dashboard_data.py</code> in this folder, then reload.");
+      return;
+    }
 
-  Plotly.newPlot('ph2-r2-comparison', [{
-    x: ['XGBoost', 'Global Mean', "Yesterday's Rate"], y: [0.126, -0.052, -0.623],
-    name: 'Row-Level CV', type: 'bar', marker: { color: COL.steel }
-  }, {
-    x: ['XGBoost', 'Global Mean', "Yesterday's Rate"], y: [-0.223, -0.671, -0.623],
-    name: 'Device-Level CV', type: 'bar', marker: { color: COL.red }
-  }], layout({ barmode: 'group', yaxis: { title: 'R²', zeroline: true }, legend: { orientation: 'h' } }), PLY_CONFIG);
+    const kpis = document.querySelectorAll('#ph2 .kpi-value');
+    kpis[0].dataset.target = results.row_level_r2;
+    kpis[1].dataset.target = results.device_level_r2;
+    kpis[2].dataset.target = results.row_level_mae;
+    kpis[3].dataset.target = results.n_training_rows_strict;
+    setText('ph2-strip-n', `N=${results.n_training_rows_strict} TRAIN ROWS`);
+    setText('ph2-strip-r2', `R² (DEVICE-CV): ${results.device_level_r2.toFixed(2)}`);
 
-  const devices = ['ab47b5f5','70a09b51','72deadc7','d8c353d4','672d87e6','d63f4d95','10270b87','5d5d4cad','59354710','8f4ce1d5'];
-  const drainMeans = [2.8, 1.7, 4.2, 3.1, 3.8, 2.4, 1.9, 2.2, 3.3, 2.6];
-  const drainStd   = [1.8, 0.9, 2.1, 1.4, 1.7, 0.8, 0.5, 0.7, 1.2, 0.9];
-  const boxTraces = devices.map((d, i) => ({
-    type: 'box', name: d,
-    y: Array.from({length:20}, () => drainMeans[i] + (Math.random()*2-1)*drainStd[i]).map(v=>Math.max(0.1,v)),
-    marker: { color: COL.steel, opacity: 0.7 }, line: { color: COL.ink },
-    fillcolor: 'rgba(47,102,144,0.15)'
-  }));
-  Plotly.newPlot('ph2-drain-dist', boxTraces, layout({ yaxis: { title: 'Drain Rate (% / hour)' }, xaxis: { title: 'Device' }, showlegend: false }), PLY_CONFIG);
+    // Verdict derived from the data, not typed in
+    const below = results.device_level_r2 < 0;
+    const dot = document.getElementById('ph2-status-dot');
+    const txt = document.getElementById('ph2-status-text');
+    const tone = below ? 'red' : 'amber';
+    dot.className = 'status-dot ' + tone;
+    txt.className = 'status-text ' + tone;
+    txt.textContent = below ? 'NOT PRODUCTION READY — BELOW BASELINE' : 'IMPROVING — REVALIDATE ON MORE DEVICES';
+
+    const entries = Object.entries(results.feature_importances).filter(([, v]) => v > 0).sort((a, b) => a[1] - b[1]);
+    Plotly.newPlot('ph2-importance', [{
+      x: entries.map(e => e[1]), y: entries.map(e => e[0]),
+      type: 'bar', orientation: 'h',
+      marker: { color: entries.map((e, i) => i === entries.length - 1 ? COL.red : COL.steel) }
+    }], layout({ xaxis: { title: 'Feature Importance' }, margin: { t: 18, l: 165, r: 24, b: 46 } }), PLY_CONFIG);
+
+    const topF = entries[entries.length - 1], ownRank = entries.slice().reverse().findIndex(e => e[0] === 'drain_rate_pct_per_hour') + 1;
+    setText('ph2-imp-sub', `Top predictor: ${topF[0]} (${topF[1].toFixed(3)})` +
+      (ownRank > 0 ? `. Yesterday's own drain rate ranks #${ownRank}.` : '.'));
+    const r2Labels = ['XGBoost<br>(row-level)', 'XGBoost<br>(device-level)', 'Global Mean<br>(device-level)', "Yesterday's Rate<br>(device-level)"];
+    const r2Values = [results.row_level_r2, results.device_level_r2, results.baseline_mean_device_r2, results.baseline_yesterday_device_r2];
+    Plotly.newPlot('ph2-r2-comparison', [{
+      x: r2Labels, y: r2Values, type: 'bar',
+      marker: { color: [COL.steelLt, COL.red, '#c9d1db', '#c9d1db'] },
+      text: r2Values.map(v => v.toFixed(3)), textposition: 'outside'
+    }], layout({
+      yaxis: { title: 'R²', zeroline: true, zerolinewidth: 1.5, zerolinecolor: COL.muted },
+      showlegend: false, margin: { t: 24, l: 52, r: 18, b: 70 }
+    }), PLY_CONFIG);
+
+    Plotly.newPlot('ph2-drain-dist', Object.keys(results.drain_rate_by_device).map(d => ({
+      type: 'box', name: d.slice(0, 8), y: results.drain_rate_by_device[d],
+      marker: { color: COL.steel, opacity: 0.7 }, line: { color: COL.ink },
+      fillcolor: 'rgba(47,102,144,0.15)'
+    })), layout({ yaxis: { title: 'Drain Rate (% / hour)' }, xaxis: { title: 'Device' }, showlegend: false }), PLY_CONFIG);
+
+    refreshKPIsIfVisible();
+  });
 })();
 
+/* ─── PHASE 3: reads anomaly_scores.csv ──────────── */
 (function renderPhase3() {
-  const deviceColors = { 'ab47b5f5': COL.red, '70a09b51': COL.steel, '672d87e6': COL.green, '72deadc7': COL.amber, 'd8c353d4': '#6b5b95' };
-  const allPoints = [
-    ...Array.from({length:44}, (_,i) => ({ dev:'ab47b5f5', date: new Date(2022,3,12+i*2).toISOString().split('T')[0], score: -0.42 - Math.random()*0.1, flag: i<39?1:-1 })),
-    ...Array.from({length:28}, (_,i) => ({ dev:'70a09b51', date: new Date(2022,11,1+i*3).toISOString().split('T')[0], score: -0.44 - Math.random()*0.08, flag: i<25?1:-1 })),
-    ...Array.from({length:5}, (_,i) => ({ dev:'672d87e6', date: new Date(2022,6,12+i*30).toISOString().split('T')[0], score: -0.45 - Math.random()*0.05, flag: i<4?1:-1 })),
-    ...Array.from({length:5}, (_,i) => ({ dev:'72deadc7', date: new Date(2022,6,12+i*30).toISOString().split('T')[0], score: -0.46 - Math.random()*0.05, flag: i<4?1:-1 })),
-    ...Array.from({length:5}, (_,i) => ({ dev:'d8c353d4', date: new Date(2022,6,12+i*30).toISOString().split('T')[0], score: -0.47 - Math.random()*0.06, flag: i<4?1:-1 })),
-  ];
-  const anomalyOverrides = [
-    {dev:'70a09b51', score:-0.644, date:'2023-12-18'}, {dev:'70a09b51', score:-0.611, date:'2023-01-05'},
-    {dev:'ab47b5f5', score:-0.591, date:'2023-01-17'}, {dev:'ab47b5f5', score:-0.583, date:'2023-02-19'},
-    {dev:'70a09b51', score:-0.577, date:'2023-01-12'},
-  ];
-  anomalyOverrides.forEach(o => allPoints.push({dev:o.dev, date:o.date, score:o.score, flag:-1}));
+  d3.csv("anomaly_scores.csv").catch(() => null).then(data => {
+    if (!data) {
+      console.warn("anomaly_scores.csv not found.");
+      showMissing(['ph3-timeline', 'ph3-breakdown', 'ph3-ranked'], "anomaly_scores.csv not found in this folder.");
+      return;
+    }
+    data.forEach(d => {
+      d.anomaly_score = d.anomaly_score === '' ? null : +d.anomaly_score;
+      d.anomaly_flag = +d.anomaly_flag;
+      d.persona_anomaly = d.persona_anomaly === '' ? null : +d.persona_anomaly;
+      d.battery_drain = +d.battery_drain;
+      d._date = d.date.length === 8 ? `${d.date.slice(0, 4)}-${d.date.slice(4, 6)}-${d.date.slice(6, 8)}` : d.date;
+    });
 
-  const devs = Object.keys(deviceColors);
-  const timelineTraces = devs.flatMap(dev => {
-    const pts = allPoints.filter(p=>p.dev===dev);
-    const normal = pts.filter(p=>p.flag===1);
-    const anom = pts.filter(p=>p.flag===-1);
-    return [
-      { x: normal.map(p=>p.date), y: normal.map(p=>p.score), mode:'markers', name: dev+' normal',
-        marker: { color: deviceColors[dev], size: 6, opacity: 0.55, symbol: 'circle' }, showlegend: false },
-      { x: anom.map(p=>p.date), y: anom.map(p=>p.score), mode:'markers', name: dev,
-        marker: { color: deviceColors[dev], size: 11, opacity: 1, symbol: 'x', line:{width:2,color:deviceColors[dev]} } }
-    ];
+    const scored = data.filter(d => d.anomaly_score !== null);
+    const anomalous = scored.filter(d => d.anomaly_flag === -1);
+    const normalRows = scored.filter(d => d.anomaly_flag === 1);
+    const skipped = data.filter(d => d.anomaly_score === null);
+    const doubleFlagged = anomalous.filter(d => d.persona_anomaly === 1);
+
+    const kpis = document.querySelectorAll('#ph3 .kpi-value');
+    kpis[0].dataset.target = anomalous.length;
+    kpis[1].dataset.target = new Set(scored.map(d => d.device_id)).size;
+    kpis[2].dataset.target = new Set(skipped.map(d => d.device_id)).size;
+    kpis[3].dataset.target = doubleFlagged.length;
+    setText('ph3-strip-flag', `${anomalous.length} FLAGGED / ${data.length}`);
+
+    const devices = Array.from(new Set(scored.map(d => d.device_id)));
+    const palette = [COL.red, COL.steel, COL.green, COL.amber, '#6b5b95', '#8e6c3a'];
+    const colorOf = {}; devices.forEach((d, i) => colorOf[d] = palette[i % palette.length]);
+
+    const traces = devices.flatMap(dev => {
+      const pts = scored.filter(p => p.device_id === dev);
+      const norm = pts.filter(p => p.anomaly_flag === 1);
+      const anom = pts.filter(p => p.anomaly_flag === -1);
+      return [
+        { x: norm.map(p => p._date), y: norm.map(p => p.anomaly_score), mode: 'markers', name: dev.slice(0, 8) + ' normal',
+          marker: { color: colorOf[dev], size: 6, opacity: 0.55, symbol: 'circle' }, showlegend: false },
+        { x: anom.map(p => p._date), y: anom.map(p => p.anomaly_score), mode: 'markers', name: dev.slice(0, 8),
+          marker: { color: colorOf[dev], size: 11, symbol: 'x', line: { width: 2, color: colorOf[dev] } } }
+      ];
+    });
+    if (anomalous.length) {
+      const boundary = Math.max(...anomalous.map(d => d.anomaly_score));
+      traces.push({ x: [d3.min(scored, d => d._date), d3.max(scored, d => d._date)], y: [boundary, boundary],
+        mode: 'lines', name: 'Approx. Decision Boundary', line: { color: COL.red, dash: 'dash', width: 1.5 } });
+    }
+    Plotly.newPlot('ph3-timeline', traces, layout({
+      xaxis: { title: 'Date', type: 'date' }, yaxis: { title: 'Anomaly Score (lower = more anomalous)' },
+      legend: { orientation: 'h', y: -0.2 }
+    }), PLY_CONFIG);
+
+    const allDevices = Array.from(new Set(data.map(d => d.device_id)));
+    const short = allDevices.map(d => d.slice(0, 8));
+    const count = (rows, dev) => rows.filter(d => d.device_id === dev).length;
+    Plotly.newPlot('ph3-breakdown', [
+      { x: short, y: allDevices.map(d => count(normalRows, d)), name: 'Normal', type: 'bar', marker: { color: COL.steel } },
+      { x: short, y: allDevices.map(d => count(anomalous, d)), name: 'Anomalous', type: 'bar', marker: { color: COL.red } },
+      { x: short, y: allDevices.map(d => count(skipped, d)), name: 'Insufficient History', type: 'bar', marker: { color: '#dde3ec' } },
+    ], layout({ barmode: 'stack', xaxis: { title: 'Device', tickangle: -45 }, yaxis: { title: 'Device-Days' }, legend: { orientation: 'h' } }), PLY_CONFIG);
+
+    const top = anomalous.slice().sort((a, b) => a.anomaly_score - b.anomaly_score).slice(0, 8).reverse();
+    Plotly.newPlot('ph3-ranked', [{
+      y: top.map(d => `${d.device_id.slice(0, 8)} · ${d._date}`), x: top.map(d => d.anomaly_score),
+      type: 'bar', orientation: 'h',
+      marker: { color: top.map(d => d.battery_drain < 20 ? COL.steel : COL.red) },
+      text: top.map(d => `drain=${d.battery_drain}%`), textposition: 'outside'
+    }], layout({ xaxis: { title: 'Anomaly Score' }, margin: { t: 18, l: 170, r: 90, b: 46 }, showlegend: false }), PLY_CONFIG);
+
+    refreshKPIsIfVisible();
   });
-  timelineTraces.push({ x: ['2022-01-01','2024-01-01'], y: [-0.545,-0.545], mode: 'lines', name: 'Decision Boundary',
-    line: { color: COL.red, dash: 'dash', width: 1.5 }, showlegend: true });
-  Plotly.newPlot('ph3-timeline', timelineTraces, layout({
-    xaxis: { title: 'Date', type: 'date' }, yaxis: { title: 'Anomaly Score (lower = more anomalous)' },
-    legend: { orientation: 'h', y: -0.2 }
-  }), PLY_CONFIG);
-
-  const devList = ['ab47b5f5','70a09b51','672d87e6','72deadc7','d8c353d4','d63f4d95','10270b87','59354710','5d5d4cad','8f4ce1d5'];
-  const normalCounts  = [39, 25, 4, 4, 4, 0, 0, 0, 0, 0];
-  const anomCounts    = [ 5,  3, 1, 1, 1, 0, 0, 0, 0, 0];
-  const skippedCounts = [ 0,  0, 0, 0, 0, 3, 1, 1, 1, 1];
-  Plotly.newPlot('ph3-breakdown', [
-    { x: devList, y: normalCounts, name: 'Normal', type: 'bar', marker: { color: COL.steel } },
-    { x: devList, y: anomCounts,   name: 'Anomalous', type: 'bar', marker: { color: COL.red } },
-    { x: devList, y: skippedCounts, name: 'Insufficient History', type: 'bar', marker: { color: '#dde3ec' } },
-  ], layout({ barmode: 'stack', xaxis: { title: 'Device', tickangle: -45 }, yaxis: { title: 'Device-Days' }, legend: { orientation: 'h' } }), PLY_CONFIG);
-
-  const topDays = [
-    { label: '70a09b51 · 2023-12-18', score: -0.644, drain: 9 },
-    { label: '70a09b51 · 2023-01-05', score: -0.611, drain: 2 },
-    { label: 'ab47b5f5 · 2023-01-17', score: -0.591, drain: 31 },
-    { label: 'ab47b5f5 · 2023-02-19', score: -0.583, drain: 80 },
-    { label: '70a09b51 · 2023-01-12', score: -0.577, drain: 37 },
-  ];
-  Plotly.newPlot('ph3-ranked', [{
-    y: topDays.map(d=>d.label), x: topDays.map(d=>d.score), type: 'bar', orientation: 'h',
-    marker: { color: topDays.map(d=>d.drain<20?COL.steel:COL.red) },
-    text: topDays.map(d=>`drain=${d.drain}%`), textposition: 'outside'
-  }], layout({ xaxis: { title: 'Anomaly Score', range: [-0.72, -0.52] }, margin: { t:18, l:200, r:80, b:46 }, showlegend: false }), PLY_CONFIG);
 })();
 
+/* ─── PHASE 4: reads q_policy.json + training_eval.json ─── */
 (function renderPhase4() {
-  const buckets  = ['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'];
-  const actions  = ['RUN_NOW','DEFER_30MIN','DEFER_CHARGING'];
-  const actionColors = { RUN_NOW: COL.red, DEFER_30MIN: COL.steel, DEFER_CHARGING: COL.green };
-  const greedy   = [0,2,1,1,1,1,1,1,0,0];
-  const qTable   = [
-    [-15.671, -21.982, -20.254], [-30.648, -31.066, -29.338], [-20.397, -17.172, -21.931],
-    [-14.982,  -8.978, -13.736], [ -9.143,  -7.966,  -8.902], [ -6.434,  -3.821,  -8.218],
-    [ -4.808,  -0.996,  -6.166], [ -4.455,  -1.221,  -7.118], [ -1.954,  -4.314,  -6.757],
-    [ -1.734,  -3.638,  -7.255],
-  ];
-  Plotly.newPlot('ph4-policy', [{
-    y: buckets, x: Array(10).fill(1), type: 'bar', orientation: 'h',
-    marker: { color: greedy.map(a => actionColors[actions[a]]) },
-    text: greedy.map(a=>actions[a]), textposition: 'inside',
-    textfont: { color: '#fff', size: 11, family: 'IBM Plex Mono, monospace' },
-    hovertemplate: '%{y}: <b>%{text}</b><extra></extra>'
-  }], layout({ xaxis: { visible: false }, margin: { t:18, l:80, r:18, b:30 }, showlegend: false }), PLY_CONFIG);
+  Promise.all([
+    d3.json("q_policy.json").catch(() => null),
+    d3.json("training_eval.json").catch(() => null),
+  ]).then(([policyData, evalData]) => {
+    if (!policyData || !evalData) {
+      console.warn("q_policy.json / training_eval.json not found.");
+      showMissing(['ph4-policy', 'ph4-comparison', 'ph4-qtable'], "q_policy.json / training_eval.json not found in this folder.");
+      return;
+    }
 
-  Plotly.newPlot('ph4-comparison', [{
-    x: ['Mean Reward', 'Final Battery %'], y: [-16.4, 32.4], name: 'Trained Agent', type: 'bar', marker: { color: COL.steel }
-  }, {
-    x: ['Mean Reward', 'Final Battery %'], y: [-76.6, 29.1], name: 'Random Baseline', type: 'bar', marker: { color: '#c9d1db' }
-  }], layout({ barmode: 'group', yaxis: { title: 'Value', zeroline: true }, legend: { orientation: 'h' } }), PLY_CONFIG);
+    const buckets = policyData.policy.map(p => p.battery_range_pct);
+    const actions = ['RUN_NOW', 'DEFER_30MIN', 'DEFER_CHARGING'];
+    const actionColors = { RUN_NOW: COL.red, DEFER_30MIN: COL.steel, DEFER_CHARGING: COL.green };
+    const greedy = policyData.policy.map(p => p.greedy_action_id);
+    const qTable = policyData.policy.map(p => actions.map(a => p.q_values[a]));
 
-  Plotly.newPlot('ph4-qtable', [{
-    z: qTable, x: actions, y: buckets, type: 'heatmap',
-    colorscale: [[0, COL.ink],[1,'#eef1f5']], showscale: true,
-    colorbar: { title: 'Q-value', len: 0.8 },
-    text: qTable.map((row,ri) => row.map((v,ci) => ci===greedy[ri]?`★ ${v.toFixed(2)}`:v.toFixed(2))),
-    texttemplate: '%{text}', textfont: { size: 11, family: 'IBM Plex Mono, monospace', color: '#e2e8f0' }
-  }], layout({ xaxis: { title: 'Action' }, yaxis: { title: 'Battery Level Bucket' }, margin: { t:18, l:90, r:40, b:56 } }), PLY_CONFIG);
+    const kpis = document.querySelectorAll('#ph4 .kpi-value');
+    kpis[0].dataset.target = evalData.reward_improvement_pct;
+    kpis[1].dataset.target = evalData.battery_improvement_pct_points;
+    kpis[1].dataset.prefix = evalData.battery_improvement_pct_points >= 0 ? '+' : '';
+    kpis[2].dataset.target = policyData.training_episodes;
+    kpis[3].dataset.target = policyData.policy.length * actions.length;
+    setText('ph4-strip-ep', `${policyData.training_episodes} EPISODES`);
 
-  const tbody = document.getElementById('ph4-policy-table');
-  const head = document.createElement('thead');
-  head.innerHTML = '<tr><th>Battery Range</th><th>Greedy Action</th><th>Q: Run</th><th>Q: Defer 30m</th><th>Q: Defer Charge</th></tr>';
-  tbody.appendChild(head);
-  const body = document.createElement('tbody');
-  const actionClass = { RUN_NOW:'action-run', DEFER_30MIN:'action-defer', DEFER_CHARGING:'action-charge' };
-  buckets.forEach((b, i) => {
-    const a = actions[greedy[i]];
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${b}</strong></td>
-      <td><span class="action-badge ${actionClass[a]}"><span class="dot"></span>${a}</span></td>
-      <td style="font-family:var(--f-mono)">${qTable[i][0].toFixed(3)}</td>
-      <td style="font-family:var(--f-mono)">${qTable[i][1].toFixed(3)}</td>
-      <td style="font-family:var(--f-mono)">${qTable[i][2].toFixed(3)}</td>`;
-    body.appendChild(tr);
+    Plotly.newPlot('ph4-policy', [{
+      y: buckets, x: buckets.map(() => 1), type: 'bar', orientation: 'h',
+      marker: { color: greedy.map(a => actionColors[actions[a]]) },
+      text: greedy.map(a => actions[a]), textposition: 'inside',
+      textfont: { color: '#fff', size: 11, family: 'IBM Plex Mono, monospace' },
+      hovertemplate: '%{y}: <b>%{text}</b><extra></extra>'
+    }], layout({ xaxis: { visible: false }, margin: { t: 18, l: 80, r: 18, b: 30 }, showlegend: false }), PLY_CONFIG);
+
+    Plotly.newPlot('ph4-comparison', [{
+      x: ['Mean Reward', 'Final Battery %'], y: [evalData.agent_mean_reward, evalData.agent_mean_final_battery],
+      name: 'Trained Agent', type: 'bar', marker: { color: COL.steel }
+    }, {
+      x: ['Mean Reward', 'Final Battery %'], y: [evalData.baseline_mean_reward, evalData.baseline_mean_final_battery],
+      name: 'Random Baseline', type: 'bar', marker: { color: '#c9d1db' }
+    }], layout({ barmode: 'group', yaxis: { title: 'Value', zeroline: true }, legend: { orientation: 'h' } }), PLY_CONFIG);
+
+    Plotly.newPlot('ph4-qtable', [{
+      z: qTable, x: actions, y: buckets, type: 'heatmap',
+      colorscale: [[0, COL.ink], [1, '#eef1f5']], showscale: true, colorbar: { title: 'Q-value', len: 0.8 },
+      text: qTable.map((row, ri) => row.map((v, ci) => ci === greedy[ri] ? `★ ${v.toFixed(2)}` : v.toFixed(2))),
+      texttemplate: '%{text}', textfont: { size: 11, family: 'IBM Plex Mono, monospace', color: '#e2e8f0' }
+    }], layout({ xaxis: { title: 'Action' }, yaxis: { title: 'Battery Level Bucket' }, margin: { t: 18, l: 90, r: 40, b: 56 } }), PLY_CONFIG);
+
+    const table = document.getElementById('ph4-policy-table');
+    table.innerHTML = '<thead><tr><th>Battery Range</th><th>Greedy Action</th><th>Q: Run</th><th>Q: Defer 30m</th><th>Q: Defer Charge</th></tr></thead>';
+    const body = document.createElement('tbody');
+    const cls = { RUN_NOW: 'action-run', DEFER_30MIN: 'action-defer', DEFER_CHARGING: 'action-charge' };
+    buckets.forEach((b, i) => {
+      const a = actions[greedy[i]];
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><strong>${b}</strong></td>
+        <td><span class="action-badge ${cls[a]}"><span class="dot"></span>${a}</span></td>
+        <td style="font-family:var(--f-mono)">${qTable[i][0].toFixed(3)}</td>
+        <td style="font-family:var(--f-mono)">${qTable[i][1].toFixed(3)}</td>
+        <td style="font-family:var(--f-mono)">${qTable[i][2].toFixed(3)}</td>`;
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+
+    refreshKPIsIfVisible();
   });
-  tbody.appendChild(body);
 })();
+
 </script>
 </body>
 </html>
