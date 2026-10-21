@@ -1,0 +1,22 @@
+{
+  "agent_mean_reward": -16.439999999999998,
+  "agent_std_reward": 27.8890641650092,
+  "agent_mean_final_battery": 32.352258575677695,
+  "baseline_mean_reward": -76.57250000000002,
+  "baseline_std_reward": 38.21228033957147,
+  "baseline_mean_final_battery": 29.087258575677698,
+  "reward_improvement_pct": 78.53015116290405,
+  "battery_improvement_pct_points": 3.264999999999997,
+  "episode_rewards_sample": [
+    -61.10000000000001,
+    -66.80000000000003,
+    -93.80000000000003,
+    -75.45,
+    -2.7249999999999996,
+    -48.10000000000001,
+    0.19999999999999807,
+    -9.799999999999986,
+    -57.35,
+    -51.649999999999984
+  ]
+}

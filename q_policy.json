@@ -1,0 +1,129 @@
+{
+  "description": "Trained Q-table for energy-aware task scheduling. At inference: map current battery level to bucket (battery_level // 10, max 9), read greedy_action. No ML framework needed on-device.",
+  "state_space": "10 battery-level buckets (each 10 pct-points wide)",
+  "actions": {
+    "0": "RUN_NOW -- execute task immediately",
+    "1": "DEFER_30MIN -- postpone task by 30 minutes",
+    "2": "DEFER_CHARGING -- postpone task until device is next charging"
+  },
+  "training_episodes": 500,
+  "hyperparameters": {
+    "alpha": 0.1,
+    "gamma": 0.95,
+    "epsilon_start": 1.0,
+    "epsilon_end": 0.05,
+    "epsilon_decay": 0.995
+  },
+  "policy": [
+    {
+      "battery_bucket": 0,
+      "battery_range_pct": "0-10%",
+      "q_values": {
+        "RUN_NOW": -15.6714,
+        "DEFER_30MIN": -21.9816,
+        "DEFER_CHARGING": -20.2541
+      },
+      "greedy_action": "RUN_NOW",
+      "greedy_action_id": 0
+    },
+    {
+      "battery_bucket": 1,
+      "battery_range_pct": "10-20%",
+      "q_values": {
+        "RUN_NOW": -30.6479,
+        "DEFER_30MIN": -31.0659,
+        "DEFER_CHARGING": -29.3381
+      },
+      "greedy_action": "DEFER_CHARGING",
+      "greedy_action_id": 2
+    },
+    {
+      "battery_bucket": 2,
+      "battery_range_pct": "20-30%",
+      "q_values": {
+        "RUN_NOW": -20.3969,
+        "DEFER_30MIN": -17.1724,
+        "DEFER_CHARGING": -21.9309
+      },
+      "greedy_action": "DEFER_30MIN",
+      "greedy_action_id": 1
+    },
+    {
+      "battery_bucket": 3,
+      "battery_range_pct": "30-40%",
+      "q_values": {
+        "RUN_NOW": -14.9817,
+        "DEFER_30MIN": -8.9782,
+        "DEFER_CHARGING": -13.7365
+      },
+      "greedy_action": "DEFER_30MIN",
+      "greedy_action_id": 1
+    },
+    {
+      "battery_bucket": 4,
+      "battery_range_pct": "40-50%",
+      "q_values": {
+        "RUN_NOW": -9.1428,
+        "DEFER_30MIN": -7.9657,
+        "DEFER_CHARGING": -8.9024
+      },
+      "greedy_action": "DEFER_30MIN",
+      "greedy_action_id": 1
+    },
+    {
+      "battery_bucket": 5,
+      "battery_range_pct": "50-60%",
+      "q_values": {
+        "RUN_NOW": -6.4335,
+        "DEFER_30MIN": -3.8206,
+        "DEFER_CHARGING": -8.2182
+      },
+      "greedy_action": "DEFER_30MIN",
+      "greedy_action_id": 1
+    },
+    {
+      "battery_bucket": 6,
+      "battery_range_pct": "60-70%",
+      "q_values": {
+        "RUN_NOW": -4.8079,
+        "DEFER_30MIN": -0.996,
+        "DEFER_CHARGING": -6.1663
+      },
+      "greedy_action": "DEFER_30MIN",
+      "greedy_action_id": 1
+    },
+    {
+      "battery_bucket": 7,
+      "battery_range_pct": "70-80%",
+      "q_values": {
+        "RUN_NOW": -4.4552,
+        "DEFER_30MIN": -1.2206,
+        "DEFER_CHARGING": -7.1176
+      },
+      "greedy_action": "DEFER_30MIN",
+      "greedy_action_id": 1
+    },
+    {
+      "battery_bucket": 8,
+      "battery_range_pct": "80-90%",
+      "q_values": {
+        "RUN_NOW": -1.9543,
+        "DEFER_30MIN": -4.3136,
+        "DEFER_CHARGING": -6.7571
+      },
+      "greedy_action": "RUN_NOW",
+      "greedy_action_id": 0
+    },
+    {
+      "battery_bucket": 9,
+      "battery_range_pct": "90-100%",
+      "q_values": {
+        "RUN_NOW": -1.7337,
+        "DEFER_30MIN": -3.6376,
+        "DEFER_CHARGING": -7.2546
+      },
+      "greedy_action": "RUN_NOW",
+      "greedy_action_id": 0
+    }
+  ]
+}

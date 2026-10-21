@@ -1,0 +1,46 @@
+{
+  "n_clusters": 3,
+  "n_device_days": 94,
+  "n_unique_devices": 10,
+  "silhouette_score": 0.236,
+  "cluster_sizes": {
+    "0": 53,
+    "1": 7,
+    "2": 34
+  },
+  "cluster_labels": {
+    "0": "low avg_mobile_rx & low avg_wifi_rx",
+    "1": "high avg_mobile_rx & high avg_mobile_tx",
+    "2": "low avg_mobile_rx & low avg_mobile_tx"
+  },
+  "radar_features": [
+    "screen_on_ratio",
+    "avg_mobile_rx",
+    "battery_drain",
+    "avg_cpu_usage",
+    "unique_foreground_apps"
+  ],
+  "cluster_profiles": {
+    "0": [
+      0.384,
+      8419.734,
+      66.151,
+      65.507,
+      20.868
+    ],
+    "1": [
+      0.434,
+      152602.902,
+      117.0,
+      48.082,
+      31.571
+    ],
+    "2": [
+      0.33,
+      12.12,
+      38.235,
+      51.204,
+      6.294
+    ]
+  }
+}
