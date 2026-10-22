@@ -305,25 +305,16 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
 <main id="main">
 
 <div id="view-exploration" class="view active">
-   <!-- <div class="filters-row">
-      <label for="device-hourly">Device</label>
-      <select id="device-hourly"><option value="all">All Devices</option></select>
-      <button class="btn btn-outline" id="reset-btn">Reset Filters</button>
-    </div> -->
-   
-   <!-- Global Filters Row for all Exploration Tabs -->
-  <div class="filters-row" style="margin-bottom: 20px; background: var(--card); padding: 12px 16px; border-radius: var(--radius); box-shadow: var(--shadow);">
-    <label for="global-device-select">Device Filter:</label>
-    <select id="global-device-select">
-      <option value="all">All Devices</option>
-    </select>
-    <button class="btn btn-outline" id="global-reset-btn">Reset Filters</button>
-  </div>
 
   <div id="exp-hourly" class="tab-content active">
     <div class="page-header">
       <div class="page-title">Hourly Energy Usage</div>
       <div class="page-desc">Average normalized device and battery energy consumption across all 24 hours.</div>
+    </div>
+    <div class="filters-row">
+      <label for="device-hourly">Global Device Filter</label>
+      <select id="device-hourly"><option value="all">All Devices</option></select>
+      <button class="btn btn-outline" id="reset-btn">Reset Filters</button>
     </div>
     <div class="panel"><div id="chart-hourly" class="chart-box tall"></div></div>
   </div>
@@ -339,7 +330,7 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
   <div id="exp-components" class="tab-content" style="display:none">
     <div class="page-header">
       <div class="page-title">CPU / Screen / RAM Over Time</div>
-      <div class="page-desc">Hourly contribution of each system component, per device.</div>
+      <div class="page-desc">Hourly contribution of each system component for the selected device context.</div>
     </div>
     <div class="panel"><div id="chart-components-contribution" class="chart-box" style="height:520px;"></div></div>
   </div>
@@ -381,11 +372,7 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       </div>
       <div class="panel">
         <div class="panel-title">Optimized Weekly Schedule</div>
-        <div class="panel-subtitle">Select a device to view its optimized day × hour heatmap.</div>
-        <div class="filters-row" style="margin-bottom:10px">
-          <label for="device-schedule">Device</label>
-          <select id="device-schedule"><option value="all">Select a device…</option></select>
-        </div>
+        <div class="panel-subtitle">Select a device from the global filter or view below.</div>
         <div id="chart-ga-schedule" class="chart-box"></div>
       </div>
     </div>
@@ -643,9 +630,18 @@ function layout(extra) {
   }, extra);
 }
 
-let globalData = [], gaSchedule = [];
+// ISSUE 2 HELPER: Truncate/clean long device strings
+function cleanDeviceName(name) {
+  if (!name) return '';
+  const str = String(name).trim();
+  if (str.length > 10) {
+    return str.substring(0, 8) + '…';
+  }
+  return str;
+}
+
+let globalData = [], componentData = [], gaSchedule = [];
 let currentFilter = { device: 'all', day: null, hour: null };
-   let deviceLabels = {};
 
 d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
   data.forEach(d => {
@@ -657,116 +653,42 @@ d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
     d.ram_capacity = +d.ram_capacity; d.core_numbers = +d.core_numbers;
   });
   globalData = data;
+  
+  // Populate main device filter dropdown with clean names
   const devices = Array.from(new Set(data.map(d => d.device_id)));
+  const sel = document.getElementById('device-hourly');
+  if (sel) {
+    devices.forEach(d => { 
+      const o = document.createElement('option'); 
+      o.value = d; 
+      o.text = cleanDeviceName(d); 
+      sel.add(o); 
+    });
+  }
 
-   devices.forEach((id, index) => {
-    deviceLabels[id] = `Device ${String.fromCharCode(65 + index)}`; // Generates "Device A", "Device B", etc.
-  });
-  // ----------------------------------
-
-  // Populate your dropdowns using the labels for display text:
-  const sel = document.getElementById('global-device-select'); // or whichever dropdown ID you use
-  devices.forEach(d => { 
-    const o = document.createElement('option'); 
-    o.value = d;           // Keeps the real ID for filtering logic
-    o.text = deviceLabels[d]; // Shows "Device A", "Device B" to the user
-    sel.add(o); 
-  });
-  
-  const sel = document.getElementById('global-device-select');
-  devices.forEach(d => { 
-    const o = document.createElement('option'); 
-    o.value = d; 
-    o.text = d; // We will map this to Device A/B in the next step!
-    sel.add(o); 
-  });
-
-  sel.addEventListener('change', () => {
-    currentFilter.device = sel.value; 
+  // ISSUE 1: Connect Global Device Filter to renderAll()
+  document.getElementById('device-hourly').addEventListener('change', () => {
+    currentFilter.device = document.getElementById('device-hourly').value; 
     renderAll();
   });
   
-  document.getElementById('global-reset-btn').addEventListener('click', () => {
+  document.getElementById('reset-btn').addEventListener('click', () => {
     currentFilter = { device: 'all', day: null, hour: null };
-    sel.value = 'all'; 
+    document.getElementById('device-hourly').value = 'all'; 
     renderAll();
   });
-  
   renderAll();
-}).catch(() => console.warn('globalData = data;
-  const devices = Array.from(new Set(data.map(d => d.device_id)));
-  
-  const sel = document.getElementById('global-device-select');
-  devices.forEach(d => { 
-    const o = document.createElement('option'); 
-    o.value = d; 
-    o.text = d; // We will map this to Device A/B in the next step!
-    sel.add(o); 
-  });
-
-  sel.addEventListener('change', () => {
-    currentFilter.device = sel.value; 
-    renderAll();
-  });
-  
-  document.getElementById('global-reset-btn').addEventListener('click', () => {
-    currentFilter = { device: 'all', day: null, hour: null };
-    sel.value = 'all'; 
-    renderAll();
-  });
-  
-  renderAll();.csv not found — exploration charts will be empty.'));
+}).catch(() => console.warn('final_energy_analysis_data_normalized.csv not found — exploration charts will be empty.'));
 
 d3.csv("component_contribution_data.csv").then(data => {
-  const deviceId = data[0].device_id;
-  const filtered = data.filter(d => d.device_id === deviceId);
-  const hours = filtered.map(d => +d.hour);
-  
-  Plotly.newPlot("chart-components-contribution", [
-    { 
-      x: hours, 
-      y: filtered.map(d => +d.avg_cpu), 
-      name: 'CPU', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.red, width: 2 }, 
-      marker: { size: 5 },
-      xaxis: 'x',
-      yaxis: 'y'
-    },
-    { 
-      x: hours, 
-      y: filtered.map(d => +d.avg_screen_on), 
-      name: 'Screen', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.amber, width: 2 }, 
-      marker: { size: 5 },
-      xaxis: 'x2',
-      yaxis: 'y2'
-    },
-    { 
-      x: hours, 
-      y: filtered.map(d => +d.avg_ram_usage), 
-      name: 'RAM', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.steel, width: 2 }, 
-      marker: { size: 5 },
-      xaxis: 'x3',
-      yaxis: 'y3'
-    },
-  ], layout({
-    grid: { rows: 3, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
-    xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid, anchor: 'y' },
-    xaxis2: { dtick: 1, gridcolor: COL.grid, anchor: 'y2', showticklabels: false },
-    xaxis3: { dtick: 1, gridcolor: COL.grid, anchor: 'y3', showticklabels: false },
-    yaxis: { title: 'CPU', gridcolor: COL.grid },
-    yaxis2: { title: 'Screen', gridcolor: COL.grid },
-    yaxis3: { title: 'RAM', gridcolor: COL.grid },
-    margin: { t: 18, l: 55, r: 18, b: 46 },
-    showlegend: false
-  }), PLY_CONFIG);
+  data.forEach(d => {
+    d.hour = +d.hour;
+    d.avg_cpu = +d.avg_cpu;
+    d.avg_screen_on = +d.avg_screen_on;
+    d.avg_ram_usage = +d.avg_ram_usage;
+  });
+  componentData = data;
+  renderComponentsContribution(filteredData());
 }).catch(() => {});
 
 d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
@@ -793,11 +715,21 @@ function filteredData() {
     return true;
   });
 }
+
+// Global update trigger for all charts
 function renderAll() {
   const d = filteredData();
-  renderHourly(d); renderDayOfWeek(d); renderConnectivity(d);
-  renderApps(d); renderDeviceComparison(d); renderDistribution(d); renderCorrelation(d);
+  renderHourly(d); 
+  renderDayOfWeek(d); 
+  renderComponentsContribution(d);
+  renderConnectivity(d);
+  renderApps(d); 
+  renderDeviceComparison(d); 
+  renderGASchedule();
+  renderDistribution(d); 
+  renderCorrelation(d);
 }
+
 function renderHourly(data) {
   const hours = [...Array(24).keys()];
   const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
@@ -820,7 +752,7 @@ function renderHourly(data) {
       mode: 'lines+markers', 
       line: { color: COL.steel, width: 2.5 }, 
       marker: { size: 7 },
-      yaxis: 'y2' // Assigns this line to the secondary right axis
+      yaxis: 'y2'
     },
   ], layout({ 
       xaxis: { title: 'Hour of Day' }, 
@@ -835,11 +767,12 @@ function renderHourly(data) {
         tickfont: { color: COL.steel }, 
         overlaying: 'y', 
         side: 'right', 
-        gridcolor: 'transparent' // Prevents overlapping background grid lines
+        gridcolor: 'transparent'
       },
       legend: { orientation: 'h', y: -0.2 } 
   }), PLY_CONFIG);
 }
+
 function renderDayOfWeek(data) {
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
@@ -850,20 +783,103 @@ function renderDayOfWeek(data) {
     currentFilter.day = pts.points[0].pointIndex; renderAll();
   });
 }
+
+function renderComponentsContribution(data) {
+  if (!componentData.length) return;
+  
+  // Filter component dataset based on current global device selection
+  let filteredComp = componentData;
+  if (currentFilter.device !== 'all') {
+    filteredComp = componentData.filter(d => d.device_id === currentFilter.device);
+  }
+  
+  // Aggregate component levels per hour across filtered devices
+  const hours = [...Array(24).keys()];
+  const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  
+  const cpuY = hours.map(h => avg(filteredComp.filter(d => d.hour === h).map(d => d.avg_cpu)));
+  const screenY = hours.map(h => avg(filteredComp.filter(d => d.hour === h).map(d => d.avg_screen_on)));
+  const ramY = hours.map(h => avg(filteredComp.filter(d => d.hour === h).map(d => d.avg_ram_usage)));
+
+  Plotly.newPlot("chart-components-contribution", [
+    { 
+      x: hours, 
+      y: cpuY, 
+      name: 'CPU', 
+      type: 'scatter', 
+      mode: 'lines+markers', 
+      line: { color: COL.red, width: 2 }, 
+      marker: { size: 5 },
+      xaxis: 'x',
+      yaxis: 'y'
+    },
+    { 
+      x: hours, 
+      y: screenY, 
+      name: 'Screen', 
+      type: 'scatter', 
+      mode: 'lines+markers', 
+      line: { color: COL.amber, width: 2 }, 
+      marker: { size: 5 },
+      xaxis: 'x2',
+      yaxis: 'y2'
+    },
+    { 
+      x: hours, 
+      y: ramY, 
+      name: 'RAM', 
+      type: 'scatter', 
+      mode: 'lines+markers', 
+      line: { color: COL.steel, width: 2 }, 
+      marker: { size: 5 },
+      xaxis: 'x3',
+      yaxis: 'y3'
+    },
+  ], layout({
+    grid: { rows: 3, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
+    xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid, anchor: 'y' },
+    xaxis2: { dtick: 1, gridcolor: COL.grid, anchor: 'y2', showticklabels: false },
+    xaxis3: { dtick: 1, gridcolor: COL.grid, anchor: 'y3', showticklabels: false },
+    yaxis: { title: 'CPU', gridcolor: COL.grid },
+    yaxis2: { title: 'Screen', gridcolor: COL.grid },
+    yaxis3: { title: 'RAM', gridcolor: COL.grid },
+    margin: { t: 18, l: 55, r: 18, b: 46 },
+    showlegend: false
+  }), PLY_CONFIG);
+}
+
 function renderConnectivity(data) {
   Plotly.newPlot('chart-connectivity', [{
-    x: data.map(d=>d.wifi_tx||0), y: data.map(d=>d.mobile_tx||0),
-    mode: 'markers', type: 'scatter', text: data.map(d=>`Device: ${deviceLabels[d.device_id] || d.device_id}`),
+    x: data.map(d => d.wifi_tx || 0), 
+    y: data.map(d => d.mobile_tx || 0),
+    mode: 'markers', 
+    type: 'scatter', 
+    text: data.map(d => `Device: ${cleanDeviceName(d.device_id)}`),
     marker: { size: 8, color: '#6b5b95', opacity: 0.7 }
   }], layout({ xaxis: { title: 'WiFi TX' }, yaxis: { title: 'Mobile TX' } }), PLY_CONFIG);
 }
+
 function renderApps(data) {
-  const devices = data.map(d => d.device_id);
+  // Group apps activity by clean device names
+  const deviceMap = {};
+  data.forEach(d => {
+    const cleanName = cleanDeviceName(d.device_id);
+    if (!deviceMap[cleanName]) {
+      deviceMap[cleanName] = { fg: [], bg: [] };
+    }
+    deviceMap[cleanName].fg.push(d.num_foreground_apps);
+    deviceMap[cleanName].bg.push(d.num_background_apps);
+  });
+
+  const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  const devices = Object.keys(deviceMap);
+  const fgAvg = devices.map(dev => avg(deviceMap[dev].fg));
+  const bgAvg = devices.map(dev => avg(deviceMap[dev].bg));
   
   Plotly.newPlot('chart-apps', [
     { 
       x: devices, 
-      y: data.map(d => d.num_foreground_apps), 
+      y: fgAvg, 
       name: 'Foreground', 
       type: 'bar', 
       marker: { color: COL.red },
@@ -872,7 +888,7 @@ function renderApps(data) {
     },
     { 
       x: devices, 
-      y: data.map(d => d.num_background_apps), 
+      y: bgAvg, 
       name: 'Background', 
       type: 'bar', 
       marker: { color: COL.steel },
@@ -889,18 +905,24 @@ function renderApps(data) {
     showlegend: false
   }), PLY_CONFIG);
 }
+
 function renderDeviceComparison(data) {
   Plotly.newPlot('chart-device', [{
-    x: data.map(d=>d.battery_capacity), y: data.map(d=>d.sum_norm_device),
-    text: data.map(d=>d.device_id), mode: 'markers', type: 'scatter',
+    x: data.map(d => d.battery_capacity), 
+    y: data.map(d => d.sum_norm_device),
+    text: data.map(d => cleanDeviceName(d.device_id)), 
+    mode: 'markers', 
+    type: 'scatter',
     marker: { size: 10, color: COL.steel, opacity: 0.8 }
   }], layout({ xaxis: { title: 'Battery Capacity' }, yaxis: { title: 'Normalized Energy' } }), PLY_CONFIG);
 }
+
 function renderDistribution(data) {
   Plotly.newPlot('chart-distribution', [{
-    x: data.map(d=>d.sum_norm_device), type: 'histogram', marker: { color: COL.red, opacity: 0.8 }, nbinsx: 30
+    x: data.map(d => d.sum_norm_device), type: 'histogram', marker: { color: COL.red, opacity: 0.8 }, nbinsx: 30
   }], layout({ xaxis: { title: 'Normalized Energy' }, yaxis: { title: 'Count' } }), PLY_CONFIG);
 }
+
 function renderCorrelation(data) {
   const keys = ['sum_norm_device','sum_norm_battery','avg_cpu','avg_screen_on','avg_ram_usage','num_foreground_apps','num_background_apps'];
   const n = keys.length;
@@ -910,8 +932,8 @@ function renderCorrelation(data) {
     const mx = x.reduce((a,b)=>a+b,0)/x.length, my = y.reduce((a,b)=>a+b,0)/y.length;
     const cov = x.map((v,k)=>(v-mx)*(y[k]-my)).reduce((a,b)=>a+b,0)/x.length;
     const sx = Math.sqrt(x.map(v=>Math.pow(v-mx,2)).reduce((a,b)=>a+b,0)/x.length);
-    const sy = Math.sqrt(y.map(v=>Math.pow(v-my,2)).reduce((a,b)=>a+b,0)/y.length);
-    matrix[i][j] = cov / (sx * sy);
+    const sy = Math.sqrt(y.map(v=>Math.pow(v-my,2)).reduce((a,b)=>a+b,0)/x.length);
+    matrix[i][j] = cov / (sx * sy) || 0;
   }
   Plotly.newPlot('chart-correlation', [{
     z: matrix, x: keys, y: keys, type: 'heatmap',
@@ -919,13 +941,24 @@ function renderCorrelation(data) {
     colorbar: { title: 'r', len: 0.8 }
   }], layout({ margin: { t: 18, l: 140, r: 18, b: 140 } }), PLY_CONFIG);
 }
+
 function renderGASchedule() {
   if (!gaSchedule.length) return;
-  const dev = currentFilter.device;
   const el = document.getElementById('chart-ga-schedule');
-  if (dev === 'all') { el.innerHTML = "<p style='padding:2rem;color:var(--muted);font-size:.82rem'>Select a device above to view its schedule.</p>"; return; }
-  const ds = gaSchedule.filter(d => d.device_id === dev);
-  if (!ds.length) { el.innerHTML = "<p style='padding:2rem;color:var(--muted);font-size:.82rem'>No schedule data for this device.</p>"; return; }
+  
+  // Driven globally or defaults to first device if 'all' is chosen
+  let targetDevice = currentFilter.device;
+  if (targetDevice === 'all') {
+    const availableDevices = Array.from(new Set(gaSchedule.map(d => d.device_id)));
+    targetDevice = availableDevices[0] || 'all';
+  }
+
+  const ds = gaSchedule.filter(d => d.device_id === targetDevice);
+  if (!ds.length) { 
+    el.innerHTML = "<p style='padding:2rem;color:var(--muted);font-size:.82rem'>No schedule data for the selected device context.</p>"; 
+    return; 
+  }
+  
   const labelMap = { Low: 0, Normal: 1, High: 2 };
   const matrix = Array.from({length:7}, () => Array(24).fill(null));
   ds.forEach(d => { matrix[d.day_of_week][d.hour] = labelMap[d.drain_label]; });
@@ -935,9 +968,10 @@ function renderGASchedule() {
     zmin: 0, zmax: 2, showscale: true,
     colorbar: { tickvals:[0,1,2], ticktext:['Low','Normal','High'], len:0.8 }
   }], layout({
+    title: { text: `Device: ${cleanDeviceName(targetDevice)}`, font: { size: 12, color: COL.muted } },
     xaxis: { title: 'Hour of Day' },
     yaxis: { title: 'Day', tickvals:[0,1,2,3,4,5,6], ticktext:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] },
-    margin: { t: 18, l: 60, r: 40, b: 46 }
+    margin: { t: 30, l: 60, r: 40, b: 46 }
   }), PLY_CONFIG);
 }
 
@@ -966,7 +1000,6 @@ function refreshKPIsIfVisible() {
     const clusterIds = Object.keys(results.cluster_sizes).sort();
     const sizes = clusterIds.map(id => results.cluster_sizes[id]);
 
-    // Name clusters by ranking their real mobile-data usage (robust to cluster ID order)
     const names = {};
     const mobileIdx = results.radar_features.indexOf('avg_mobile_rx');
     if (mobileIdx >= 0 && clusterIds.length > 1) {
@@ -1044,7 +1077,6 @@ function refreshKPIsIfVisible() {
     setText('ph2-strip-n', `N=${results.n_training_rows_strict} TRAIN ROWS`);
     setText('ph2-strip-r2', `R² (DEVICE-CV): ${results.device_level_r2.toFixed(2)}`);
 
-    // Verdict derived from the data, not typed in
     const below = results.device_level_r2 < 0;
     const dot = document.getElementById('ph2-status-dot');
     const txt = document.getElementById('ph2-status-text');
@@ -1075,7 +1107,7 @@ function refreshKPIsIfVisible() {
     }), PLY_CONFIG);
 
     Plotly.newPlot('ph2-drain-dist', Object.keys(results.drain_rate_by_device).map(d => ({
-      type: 'box', name: d.slice(0, 8), y: results.drain_rate_by_device[d],
+      type: 'box', name: cleanDeviceName(d), y: results.drain_rate_by_device[d],
       marker: { color: COL.steel, opacity: 0.7 }, line: { color: COL.ink },
       fillcolor: 'rgba(47,102,144,0.15)'
     })), layout({ yaxis: { title: 'Drain Rate (% / hour)' }, xaxis: { title: 'Device' }, showlegend: false }), PLY_CONFIG);
@@ -1121,10 +1153,11 @@ function refreshKPIsIfVisible() {
       const pts = scored.filter(p => p.device_id === dev);
       const norm = pts.filter(p => p.anomaly_flag === 1);
       const anom = pts.filter(p => p.anomaly_flag === -1);
+      const cName = cleanDeviceName(dev);
       return [
-        { x: norm.map(p => p._date), y: norm.map(p => p.anomaly_score), mode: 'markers', name: dev.slice(0, 8) + ' normal',
+        { x: norm.map(p => p._date), y: norm.map(p => p.anomaly_score), mode: 'markers', name: cName + ' normal',
           marker: { color: colorOf[dev], size: 6, opacity: 0.55, symbol: 'circle' }, showlegend: false },
-        { x: anom.map(p => p._date), y: anom.map(p => p.anomaly_score), mode: 'markers', name: dev.slice(0, 8),
+        { x: anom.map(p => p._date), y: anom.map(p => p.anomaly_score), mode: 'markers', name: cName,
           marker: { color: colorOf[dev], size: 11, symbol: 'x', line: { width: 2, color: colorOf[dev] } } }
       ];
     });
@@ -1139,7 +1172,7 @@ function refreshKPIsIfVisible() {
     }), PLY_CONFIG);
 
     const allDevices = Array.from(new Set(data.map(d => d.device_id)));
-    const short = allDevices.map(d => d.slice(0, 8));
+    const short = allDevices.map(d => cleanDeviceName(d));
     const count = (rows, dev) => rows.filter(d => d.device_id === dev).length;
     Plotly.newPlot('ph3-breakdown', [
       { x: short, y: allDevices.map(d => count(normalRows, d)), name: 'Normal', type: 'bar', marker: { color: COL.steel } },
@@ -1149,7 +1182,7 @@ function refreshKPIsIfVisible() {
 
     const top = anomalous.slice().sort((a, b) => a.anomaly_score - b.anomaly_score).slice(0, 8).reverse();
     Plotly.newPlot('ph3-ranked', [{
-      y: top.map(d => `${d.device_id.slice(0, 8)} · ${d._date}`), x: top.map(d => d.anomaly_score),
+      y: top.map(d => `${cleanDeviceName(d.device_id)} · ${d._date}`), x: top.map(d => d.anomaly_score),
       type: 'bar', orientation: 'h',
       marker: { color: top.map(d => d.battery_drain < 20 ? COL.steel : COL.red) },
       text: top.map(d => `drain=${d.battery_drain}%`), textposition: 'outside'
