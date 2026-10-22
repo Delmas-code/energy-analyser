@@ -332,7 +332,7 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="page-title">CPU / Screen / RAM Over Time</div>
       <div class="page-desc">Hourly contribution of each system component, per device.</div>
     </div>
-    <div class="panel"><div id="chart-components-contribution" class="chart-box" style="height:520px;"></div></div>
+    <div class="panel"><div id="chart-components-contribution" class="chart-box tall"></div></div>
   </div>
 
   <div id="exp-connectivity" class="tab-content" style="display:none">
@@ -348,7 +348,7 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="page-title">App Activity Energy</div>
       <div class="page-desc">Foreground vs background app counts stacked per device.</div>
     </div>
-    <div class="panel"><div id="chart-apps" class="chart-box tall" style="height:420px;"></div></div>
+    <div class="panel"><div id="chart-apps" class="chart-box tall"></div></div>
   </div>
 
   <div id="exp-device" class="tab-content" style="display:none">
@@ -670,52 +670,11 @@ d3.csv("component_contribution_data.csv").then(data => {
   const deviceId = data[0].device_id;
   const filtered = data.filter(d => d.device_id === deviceId);
   const hours = filtered.map(d => +d.hour);
-  
   Plotly.newPlot("chart-components-contribution", [
-    { 
-      x: hours, 
-      y: filtered.map(d => +d.avg_cpu), 
-      name: 'CPU', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.red, width: 2 }, 
-      marker: { size: 5 },
-      xaxis: 'x',
-      yaxis: 'y'
-    },
-    { 
-      x: hours, 
-      y: filtered.map(d => +d.avg_screen_on), 
-      name: 'Screen', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.amber, width: 2 }, 
-      marker: { size: 5 },
-      xaxis: 'x2',
-      yaxis: 'y2'
-    },
-    { 
-      x: hours, 
-      y: filtered.map(d => +d.avg_ram_usage), 
-      name: 'RAM', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.steel, width: 2 }, 
-      marker: { size: 5 },
-      xaxis: 'x3',
-      yaxis: 'y3'
-    },
-  ], layout({
-    grid: { rows: 3, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
-    xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid, anchor: 'y' },
-    xaxis2: { dtick: 1, gridcolor: COL.grid, anchor: 'y2', showticklabels: false },
-    xaxis3: { dtick: 1, gridcolor: COL.grid, anchor: 'y3', showticklabels: false },
-    yaxis: { title: 'CPU', gridcolor: COL.grid },
-    yaxis2: { title: 'Screen', gridcolor: COL.grid },
-    yaxis3: { title: 'RAM', gridcolor: COL.grid },
-    margin: { t: 18, l: 55, r: 18, b: 46 },
-    showlegend: false
-  }), PLY_CONFIG);
+    { x: hours, y: filtered.map(d => +d.avg_cpu), mode: 'lines+markers', name: 'CPU', line: { color: COL.red, width: 2 }, marker: { size: 5 } },
+    { x: hours, y: filtered.map(d => +d.avg_screen_on), mode: 'lines+markers', name: 'Screen', line: { color: COL.amber, width: 2 }, marker: { size: 5 } },
+    { x: hours, y: filtered.map(d => +d.avg_ram_usage), mode: 'lines+markers', name: 'RAM', line: { color: COL.steel, width: 2 }, marker: { size: 5 } },
+  ], layout({ xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid }, yaxis: { title: 'Usage', gridcolor: COL.grid }, legend: { orientation: 'h' } }), PLY_CONFIG);
 }).catch(() => {});
 
 d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
@@ -750,44 +709,12 @@ function renderAll() {
 function renderHourly(data) {
   const hours = [...Array(24).keys()];
   const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-  
   Plotly.newPlot('chart-hourly', [
-    { 
-      x: hours, 
-      y: hours.map(h => avg(data.filter(d=>d.hour===h).map(x=>x.sum_norm_device))),
-      name: 'Device Norm', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.red, width: 2.5 }, 
-      marker: { size: 7 } 
-    },
-    { 
-      x: hours, 
-      y: hours.map(h => avg(data.filter(d=>d.hour===h).map(x=>x.sum_norm_battery))),
-      name: 'Battery Norm', 
-      type: 'scatter', 
-      mode: 'lines+markers', 
-      line: { color: COL.steel, width: 2.5 }, 
-      marker: { size: 7 },
-      yaxis: 'y2' // Assigns this line to the secondary right axis
-    },
-  ], layout({ 
-      xaxis: { title: 'Hour of Day' }, 
-      yaxis: { 
-        title: 'Device Norm Energy', 
-        titlefont: { color: COL.red }, 
-        tickfont: { color: COL.red } 
-      }, 
-      yaxis2: { 
-        title: 'Battery Norm Energy', 
-        titlefont: { color: COL.steel }, 
-        tickfont: { color: COL.steel }, 
-        overlaying: 'y', 
-        side: 'right', 
-        gridcolor: 'transparent' // Prevents overlapping background grid lines
-      },
-      legend: { orientation: 'h', y: -0.2 } 
-  }), PLY_CONFIG);
+    { x: hours, y: hours.map(h => avg(data.filter(d=>d.hour===h).map(x=>x.sum_norm_device))),
+      name: 'Device Norm', type: 'scatter', mode: 'lines+markers', line: { color: COL.red, width: 2.5 }, marker: { size: 7 } },
+    { x: hours, y: hours.map(h => avg(data.filter(d=>d.hour===h).map(x=>x.sum_norm_battery))),
+      name: 'Battery Norm', type: 'scatter', mode: 'lines+markers', line: { color: COL.steel, width: 2.5 }, marker: { size: 7 } },
+  ], layout({ xaxis: { title: 'Hour of Day' }, yaxis: { title: 'Normalized Energy' }, legend: { orientation: 'h' } }), PLY_CONFIG);
 }
 function renderDayOfWeek(data) {
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -807,36 +734,10 @@ function renderConnectivity(data) {
   }], layout({ xaxis: { title: 'WiFi TX' }, yaxis: { title: 'Mobile TX' } }), PLY_CONFIG);
 }
 function renderApps(data) {
-  const devices = data.map(d => d.device_id);
-  
   Plotly.newPlot('chart-apps', [
-    { 
-      x: devices, 
-      y: data.map(d => d.num_foreground_apps), 
-      name: 'Foreground', 
-      type: 'bar', 
-      marker: { color: COL.red },
-      xaxis: 'x',
-      yaxis: 'y'
-    },
-    { 
-      x: devices, 
-      y: data.map(d => d.num_background_apps), 
-      name: 'Background', 
-      type: 'bar', 
-      marker: { color: COL.steel },
-      xaxis: 'x2',
-      yaxis: 'y2'
-    },
-  ], layout({
-    grid: { rows: 2, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
-    xaxis: { title: 'Device', tickangle: -45, anchor: 'y', showticklabels: false },
-    xaxis2: { title: 'Device', tickangle: -45, anchor: 'y2' },
-    yaxis: { title: 'Foreground Apps', gridcolor: COL.grid },
-    yaxis2: { title: 'Background Apps', gridcolor: COL.grid },
-    margin: { t: 18, l: 65, r: 18, b: 90 },
-    showlegend: false
-  }), PLY_CONFIG);
+    { x: data.map(d=>d.device_id), y: data.map(d=>d.num_foreground_apps), name: 'Foreground', type: 'bar', marker: { color: COL.red } },
+    { x: data.map(d=>d.device_id), y: data.map(d=>d.num_background_apps), name: 'Background', type: 'bar', marker: { color: COL.steel } },
+  ], layout({ barmode: 'stack', xaxis: { title: 'Device', tickangle: -45 }, yaxis: { title: 'App Count' } }), PLY_CONFIG);
 }
 function renderDeviceComparison(data) {
   Plotly.newPlot('chart-device', [{
