@@ -670,11 +670,43 @@ d3.csv("component_contribution_data.csv").then(data => {
   const deviceId = data[0].device_id;
   const filtered = data.filter(d => d.device_id === deviceId);
   const hours = filtered.map(d => +d.hour);
+  
   Plotly.newPlot("chart-components-contribution", [
-    { x: hours, y: filtered.map(d => +d.avg_cpu), mode: 'lines+markers', name: 'CPU', line: { color: COL.red, width: 2 }, marker: { size: 5 } },
-    { x: hours, y: filtered.map(d => +d.avg_screen_on), mode: 'lines+markers', name: 'Screen', line: { color: COL.amber, width: 2 }, marker: { size: 5 } },
-    { x: hours, y: filtered.map(d => +d.avg_ram_usage), mode: 'lines+markers', name: 'RAM', line: { color: COL.steel, width: 2 }, marker: { size: 5 } },
-  ], layout({ xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid }, yaxis: { title: 'Usage', gridcolor: COL.grid }, legend: { orientation: 'h' } }), PLY_CONFIG);
+    { 
+      x: hours, 
+      y: filtered.map(d => +d.avg_cpu), 
+      name: 'CPU', 
+      type: 'scatter', 
+      mode: 'lines', 
+      stackgroup: 'one',
+      fillcolor: 'rgba(179, 70, 44, 0.35)', // Semi-transparent red
+      line: { color: COL.red, width: 1.5 } 
+    },
+    { 
+      x: hours, 
+      y: filtered.map(d => +d.avg_screen_on), 
+      name: 'Screen', 
+      type: 'scatter', 
+      mode: 'lines', 
+      stackgroup: 'one',
+      fillcolor: 'rgba(201, 138, 62, 0.35)', // Semi-transparent amber
+      line: { color: COL.amber, width: 1.5 } 
+    },
+    { 
+      x: hours, 
+      y: filtered.map(d => +d.avg_ram_usage), 
+      name: 'RAM', 
+      type: 'scatter', 
+      mode: 'lines', 
+      stackgroup: 'one',
+      fillcolor: 'rgba(47, 102, 144, 0.35)', // Semi-transparent steel blue
+      line: { color: COL.steel, width: 1.5 } 
+    },
+  ], layout({ 
+      xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid }, 
+      yaxis: { title: 'Cumulative Usage', gridcolor: COL.grid }, 
+      legend: { orientation: 'h', y: -0.25 } 
+  }), PLY_CONFIG);
 }).catch(() => {});
 
 d3.csv("enhanced_schedule_from_pickle.csv").then(scheduleData => {
