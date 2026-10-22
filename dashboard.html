@@ -348,7 +348,7 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="page-title">App Activity Energy</div>
       <div class="page-desc">Foreground vs background app counts stacked per device.</div>
     </div>
-    <div class="panel"><div id="chart-apps" class="chart-box tall"></div></div>
+    <div class="panel"><div id="chart-apps" class="chart-box tall" style="height:420px;"></div></div>
   </div>
 
   <div id="exp-device" class="tab-content" style="display:none">
@@ -803,26 +803,35 @@ function renderConnectivity(data) {
   }], layout({ xaxis: { title: 'WiFi TX' }, yaxis: { title: 'Mobile TX' } }), PLY_CONFIG);
 }
 function renderApps(data) {
+  const devices = data.map(d => d.device_id);
+  
   Plotly.newPlot('chart-apps', [
     { 
-      x: data.map(d => d.device_id), 
+      x: devices, 
       y: data.map(d => d.num_foreground_apps), 
       name: 'Foreground', 
       type: 'bar', 
-      marker: { color: COL.red } 
+      marker: { color: COL.red },
+      xaxis: 'x',
+      yaxis: 'y'
     },
     { 
-      x: data.map(d => d.device_id), 
+      x: devices, 
       y: data.map(d => d.num_background_apps), 
       name: 'Background', 
       type: 'bar', 
-      marker: { color: COL.steel } 
+      marker: { color: COL.steel },
+      xaxis: 'x2',
+      yaxis: 'y2'
     },
-  ], layout({ 
-      barmode: 'group', // Changed from 'stack' to 'group'
-      xaxis: { title: 'Device', tickangle: -45 }, 
-      yaxis: { title: 'App Count' },
-      legend: { orientation: 'h', y: -0.3 }
+  ], layout({
+    grid: { rows: 2, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
+    xaxis: { title: 'Device', tickangle: -45, anchor: 'y', showticklabels: false },
+    xaxis2: { title: 'Device', tickangle: -45, anchor: 'y2' },
+    yaxis: { title: 'Foreground Apps', gridcolor: COL.grid },
+    yaxis2: { title: 'Background Apps', gridcolor: COL.grid },
+    margin: { t: 18, l: 65, r: 18, b: 90 },
+    showlegend: false
   }), PLY_CONFIG);
 }
 function renderDeviceComparison(data) {
