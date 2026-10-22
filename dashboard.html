@@ -750,7 +750,7 @@ function renderAll() {
 function renderHourly(data) {
   const hours = [...Array(24).keys()];
   const avg = (arr) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-
+  
   Plotly.newPlot('chart-hourly', [
     { 
       x: hours, 
@@ -769,18 +769,22 @@ function renderHourly(data) {
       mode: 'lines+markers', 
       line: { color: COL.steel, width: 2.5 }, 
       marker: { size: 7 },
-      yaxis: 'y2' // Assign to secondary y-axis
+      yaxis: 'y2' // Assigns this line to the secondary right axis
     },
   ], layout({ 
       xaxis: { title: 'Hour of Day' }, 
-      yaxis: { title: 'Device Norm Energy', titlefont: {color: COL.red}, tickfont: {color: COL.red} }, 
+      yaxis: { 
+        title: 'Device Norm Energy', 
+        titlefont: { color: COL.red }, 
+        tickfont: { color: COL.red } 
+      }, 
       yaxis2: { 
         title: 'Battery Norm Energy', 
-        titlefont: {color: COL.steel}, 
-        tickfont: {color: COL.steel}, 
+        titlefont: { color: COL.steel }, 
+        tickfont: { color: COL.steel }, 
         overlaying: 'y', 
         side: 'right', 
-        gridcolor: 'transparent' // Prevents grid lines from overlapping and cluttering
+        gridcolor: 'transparent' // Prevents overlapping background grid lines
       },
       legend: { orientation: 'h', y: -0.2 } 
   }), PLY_CONFIG);
