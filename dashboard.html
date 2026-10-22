@@ -332,7 +332,7 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
       <div class="page-title">CPU / Screen / RAM Over Time</div>
       <div class="page-desc">Hourly contribution of each system component, per device.</div>
     </div>
-    <div class="panel"><div id="chart-components-contribution" class="chart-box tall"></div></div>
+    <div class="panel"><div id="chart-components-contribution" class="chart-box" style="height:520px;"></div></div>
   </div>
 
   <div id="exp-connectivity" class="tab-content" style="display:none">
@@ -677,35 +677,44 @@ d3.csv("component_contribution_data.csv").then(data => {
       y: filtered.map(d => +d.avg_cpu), 
       name: 'CPU', 
       type: 'scatter', 
-      mode: 'lines', 
-      stackgroup: 'one',
-      fillcolor: 'rgba(179, 70, 44, 0.35)', // Semi-transparent red
-      line: { color: COL.red, width: 1.5 } 
+      mode: 'lines+markers', 
+      line: { color: COL.red, width: 2 }, 
+      marker: { size: 5 },
+      xaxis: 'x',
+      yaxis: 'y'
     },
     { 
       x: hours, 
       y: filtered.map(d => +d.avg_screen_on), 
       name: 'Screen', 
       type: 'scatter', 
-      mode: 'lines', 
-      stackgroup: 'one',
-      fillcolor: 'rgba(201, 138, 62, 0.35)', // Semi-transparent amber
-      line: { color: COL.amber, width: 1.5 } 
+      mode: 'lines+markers', 
+      line: { color: COL.amber, width: 2 }, 
+      marker: { size: 5 },
+      xaxis: 'x2',
+      yaxis: 'y2'
     },
     { 
       x: hours, 
       y: filtered.map(d => +d.avg_ram_usage), 
       name: 'RAM', 
       type: 'scatter', 
-      mode: 'lines', 
-      stackgroup: 'one',
-      fillcolor: 'rgba(47, 102, 144, 0.35)', // Semi-transparent steel blue
-      line: { color: COL.steel, width: 1.5 } 
+      mode: 'lines+markers', 
+      line: { color: COL.steel, width: 2 }, 
+      marker: { size: 5 },
+      xaxis: 'x3',
+      yaxis: 'y3'
     },
-  ], layout({ 
-      xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid }, 
-      yaxis: { title: 'Cumulative Usage', gridcolor: COL.grid }, 
-      legend: { orientation: 'h', y: -0.25 } 
+  ], layout({
+    grid: { rows: 3, columns: 1, pattern: 'independent', roworder: 'top to bottom' },
+    xaxis: { title: 'Hour of Day', dtick: 1, gridcolor: COL.grid, anchor: 'y' },
+    xaxis2: { dtick: 1, gridcolor: COL.grid, anchor: 'y2', showticklabels: false },
+    xaxis3: { dtick: 1, gridcolor: COL.grid, anchor: 'y3', showticklabels: false },
+    yaxis: { title: 'CPU', gridcolor: COL.grid },
+    yaxis2: { title: 'Screen', gridcolor: COL.grid },
+    yaxis3: { title: 'RAM', gridcolor: COL.grid },
+    margin: { t: 18, l: 55, r: 18, b: 46 },
+    showlegend: false
   }), PLY_CONFIG);
 }).catch(() => {});
 
