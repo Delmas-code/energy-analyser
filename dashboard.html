@@ -804,8 +804,20 @@ function renderConnectivity(data) {
 }
 function renderApps(data) {
   Plotly.newPlot('chart-apps', [
-    { x: data.map(d=>d.device_id), y: data.map(d=>d.num_foreground_apps), name: 'Foreground', type: 'bar', marker: { color: COL.red } },
-    { x: data.map(d=>d.device_id), y: data.map(d=>d.num_background_apps), name: 'Background', type: 'bar', marker: { color: COL.steel } },
+    { 
+      x: data.map(d => d.device_id), 
+      y: data.map(d => d.num_foreground_apps), 
+      name: 'Foreground', 
+      type: 'bar', 
+      marker: { color: COL.red } 
+    },
+    { 
+      x: data.map(d => d.device_id), 
+      y: data.map(d => d.num_background_apps), 
+      name: 'Background', 
+      type: 'bar', 
+      marker: { color: COL.steel } 
+    },
   ], layout({ 
       barmode: 'group', // Changed from 'stack' to 'group'
       xaxis: { title: 'Device', tickangle: -45 }, 
