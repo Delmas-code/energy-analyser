@@ -305,16 +305,25 @@ svg.icon { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-w
 <main id="main">
 
 <div id="view-exploration" class="view active">
+   <!-- <div class="filters-row">
+      <label for="device-hourly">Device</label>
+      <select id="device-hourly"><option value="all">All Devices</option></select>
+      <button class="btn btn-outline" id="reset-btn">Reset Filters</button>
+    </div> -->
+   
+   <!-- Global Filters Row for all Exploration Tabs -->
+  <div class="filters-row" style="margin-bottom: 20px; background: var(--card); padding: 12px 16px; border-radius: var(--radius); box-shadow: var(--shadow);">
+    <label for="global-device-select">Device Filter:</label>
+    <select id="global-device-select">
+      <option value="all">All Devices</option>
+    </select>
+    <button class="btn btn-outline" id="global-reset-btn">Reset Filters</button>
+  </div>
 
   <div id="exp-hourly" class="tab-content active">
     <div class="page-header">
       <div class="page-title">Hourly Energy Usage</div>
       <div class="page-desc">Average normalized device and battery energy consumption across all 24 hours.</div>
-    </div>
-    <div class="filters-row">
-      <label for="device-hourly">Device</label>
-      <select id="device-hourly"><option value="all">All Devices</option></select>
-      <button class="btn btn-outline" id="reset-btn">Reset Filters</button>
     </div>
     <div class="panel"><div id="chart-hourly" class="chart-box tall"></div></div>
   </div>
@@ -636,6 +645,7 @@ function layout(extra) {
 
 let globalData = [], gaSchedule = [];
 let currentFilter = { device: 'all', day: null, hour: null };
+   let deviceLabels = {};
 
 d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
   data.forEach(d => {
@@ -648,23 +658,64 @@ d3.csv("final_energy_analysis_data_normalized.csv").then(data => {
   });
   globalData = data;
   const devices = Array.from(new Set(data.map(d => d.device_id)));
-  ['device-hourly', 'device-schedule'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    devices.forEach(d => { const o = document.createElement('option'); o.value = d; o.text = d; sel.add(o); });
+
+   devices.forEach((id, index) => {
+    deviceLabels[id] = `Device ${String.fromCharCode(65 + index)}`; // Generates "Device A", "Device B", etc.
   });
-  document.getElementById('device-hourly').addEventListener('change', () => {
-    currentFilter.device = document.getElementById('device-hourly').value; renderAll();
+  // ----------------------------------
+
+  // Populate your dropdowns using the labels for display text:
+  const sel = document.getElementById('global-device-select'); // or whichever dropdown ID you use
+  devices.forEach(d => { 
+    const o = document.createElement('option'); 
+    o.value = d;           // Keeps the real ID for filtering logic
+    o.text = deviceLabels[d]; // Shows "Device A", "Device B" to the user
+    sel.add(o); 
   });
-  document.getElementById('device-schedule').addEventListener('change', () => {
-    currentFilter.device = document.getElementById('device-schedule').value; renderGASchedule();
+  
+  const sel = document.getElementById('global-device-select');
+  devices.forEach(d => { 
+    const o = document.createElement('option'); 
+    o.value = d; 
+    o.text = d; // We will map this to Device A/B in the next step!
+    sel.add(o); 
   });
-  document.getElementById('reset-btn').addEventListener('click', () => {
+
+  sel.addEventListener('change', () => {
+    currentFilter.device = sel.value; 
+    renderAll();
+  });
+  
+  document.getElementById('global-reset-btn').addEventListener('click', () => {
     currentFilter = { device: 'all', day: null, hour: null };
-    document.getElementById('device-hourly').value = 'all'; renderAll();
+    sel.value = 'all'; 
+    renderAll();
   });
+  
   renderAll();
-}).catch(() => console.warn('final_energy_analysis_data_normalized.csv not found — exploration charts will be empty.'));
+}).catch(() => console.warn('globalData = data;
+  const devices = Array.from(new Set(data.map(d => d.device_id)));
+  
+  const sel = document.getElementById('global-device-select');
+  devices.forEach(d => { 
+    const o = document.createElement('option'); 
+    o.value = d; 
+    o.text = d; // We will map this to Device A/B in the next step!
+    sel.add(o); 
+  });
+
+  sel.addEventListener('change', () => {
+    currentFilter.device = sel.value; 
+    renderAll();
+  });
+  
+  document.getElementById('global-reset-btn').addEventListener('click', () => {
+    currentFilter = { device: 'all', day: null, hour: null };
+    sel.value = 'all'; 
+    renderAll();
+  });
+  
+  renderAll();.csv not found — exploration charts will be empty.'));
 
 d3.csv("component_contribution_data.csv").then(data => {
   const deviceId = data[0].device_id;
@@ -802,7 +853,7 @@ function renderDayOfWeek(data) {
 function renderConnectivity(data) {
   Plotly.newPlot('chart-connectivity', [{
     x: data.map(d=>d.wifi_tx||0), y: data.map(d=>d.mobile_tx||0),
-    mode: 'markers', type: 'scatter', text: data.map(d=>`Device: ${d.device_id}`),
+    mode: 'markers', type: 'scatter', text: data.map(d=>`Device: ${deviceLabels[d.device_id] || d.device_id}`),
     marker: { size: 8, color: '#6b5b95', opacity: 0.7 }
   }], layout({ xaxis: { title: 'WiFi TX' }, yaxis: { title: 'Mobile TX' } }), PLY_CONFIG);
 }
